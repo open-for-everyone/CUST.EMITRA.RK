@@ -39,17 +39,17 @@ builder.Services.AddMemoryCache();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "Data Source=emitra.db";
-var useMongoDb = connectionString.StartsWith("mongodb://", StringComparison.OrdinalIgnoreCase) ||
-                 connectionString.StartsWith("mongodb+srv://", StringComparison.OrdinalIgnoreCase);
+var isMongoConnectionString = IsMongoConnectionString(connectionString);
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    if (useMongoDb)
+    if (isMongoConnectionString)
     {
         options.UseMongoDB(connectionString, ResolveMongoDatabaseName(connectionString));
-        return;
     }
-
-    options.UseSqlite(connectionString);
+    else
+    {
+        options.UseSqlite(connectionString);
+    }
 });
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "CUST.EMITRA.RK.Api";
@@ -185,7 +185,8 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    if (!useMongoDb)
+    // MongoDB does not require relational schema creation like SQLite.
+    if (db.Database.IsSqlite())
     {
         db.Database.EnsureCreated();
     }
@@ -610,6 +611,10 @@ app.MapGet("/api/activity", [Authorize] async (
 });
 
 app.Run();
+
+static bool IsMongoConnectionString(string connectionString) =>
+    connectionString.StartsWith("mongodb://", StringComparison.OrdinalIgnoreCase) ||
+    connectionString.StartsWith("mongodb+srv://", StringComparison.OrdinalIgnoreCase);
 
 static string ResolveMongoDatabaseName(string connectionString)
 {
