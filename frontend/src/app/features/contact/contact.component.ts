@@ -53,7 +53,7 @@ import { SocialProvider } from '../../core/models/api.models';
             <div class="search-row">
               <input
                 type="text"
-                placeholder="Search location note"
+                placeholder="Add a location note"
                 [(ngModel)]="searchNote"
                 name="searchNote"
                 aria-label="Search location note"
@@ -123,7 +123,7 @@ import { SocialProvider } from '../../core/models/api.models';
               </p>
               <div class="contact-form-actions">
                 <button class="btn" type="submit">Send Message</button>
-                <a class="direct-email" [href]="directEmailLink()">Email directly</a>
+                <a class="direct-email" [href]="getDirectEmailLink()">Email directly</a>
               </div>
             </form>
           </div>
@@ -191,12 +191,6 @@ export class ContactComponent implements OnInit {
     const lat = this.mapLat();
     const lng = this.mapLng();
     return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${lat}%2C${lng}%3B${this.centerLat}%2C${this.centerLng}`;
-  });
-
-  readonly directEmailLink = computed(() => {
-    const subject = encodeURIComponent('Support request - RK eMitra Online Centre');
-    const body = encodeURIComponent(`Name: ${this.name}\nEmail: ${this.email}\nLocation: ${this.locationLabel()}\n\nMessage:\n${this.message}`);
-    return `mailto:support@rkemitra.in?subject=${subject}&body=${body}`;
   });
 
   readonly contactDetails = [
@@ -267,8 +261,14 @@ export class ContactComponent implements OnInit {
   }
 
   sendMessage(): void {
-    const mailto = this.directEmailLink();
+    const mailto = this.getDirectEmailLink();
     window.open(mailto, '_self');
+  }
+
+  getDirectEmailLink(): string {
+    const subject = encodeURIComponent('Support request - RK eMitra Online Centre');
+    const body = encodeURIComponent(`Name: ${this.name}\nEmail: ${this.email}\nLocation: ${this.locationLabel()}\n\nMessage:\n${this.message}`);
+    return `mailto:support@rkemitra.in?subject=${subject}&body=${body}`;
   }
 
   private loadProviders(): void {
