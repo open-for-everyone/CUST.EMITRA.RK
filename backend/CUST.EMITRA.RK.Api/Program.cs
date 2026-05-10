@@ -39,7 +39,18 @@ builder.Services.AddMemoryCache();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "Data Source=emitra.db";
-builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite(connectionString));
+var useMongoDb = connectionString.StartsWith("mongodb://", StringComparison.OrdinalIgnoreCase) ||
+                 connectionString.StartsWith("mongodb+srv://", StringComparison.OrdinalIgnoreCase);
+builder.Services.AddDbContext<AppDbContext>(options =>
+{
+    if (useMongoDb)
+    {
+        options.UseMongoDB(connectionString, ResolveMongoDatabaseName(connectionString));
+        return;
+    }
+
+    options.UseSqlite(connectionString);
+});
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "CUST.EMITRA.RK.Api";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "CUST.EMITRA.RK.Client";
@@ -174,7 +185,10 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated();
+    if (!useMongoDb)
+    {
+        db.Database.EnsureCreated();
+    }
 }
 
 if (app.Environment.IsDevelopment())
@@ -596,3 +610,19 @@ app.MapGet("/api/activity", [Authorize] async (
 });
 
 app.Run();
+
+static string ResolveMongoDatabaseName(string connectionString)
+{
+    if (!Uri.TryCreate(connectionString, UriKind.Absolute, out var uri))
+    {
+        return "emitra";
+    }
+
+    var dbName = uri.AbsolutePath.Trim('/');
+    if (string.IsNullOrWhiteSpace(dbName))
+    {
+        return "emitra";
+    }
+
+    return dbName;
+}
