@@ -29,8 +29,21 @@ function renderUpdates(items) {
   });
 }
 
+function shouldUseFallback(baseUrl) {
+  if (!baseUrl) {
+    return true;
+  }
+
+  try {
+    const parsedUrl = new URL(baseUrl);
+    return parsedUrl.hostname === 'your-render-service.onrender.com';
+  } catch {
+    return true;
+  }
+}
+
 async function loadUpdates() {
-  if (!apiBaseUrl || apiBaseUrl.includes('your-render-service.onrender.com')) {
+  if (shouldUseFallback(apiBaseUrl)) {
     renderUpdates(fallbackUpdates);
     return;
   }
