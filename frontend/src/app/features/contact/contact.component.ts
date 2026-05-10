@@ -165,7 +165,7 @@ export class ContactComponent implements OnInit, OnDestroy {
     this.mapLng.set(parseFloat(result.lon));
     this.locationAccuracy.set(null);
     this.locationError.set('');
-    this.searchNote = result.display_name.split(',')[0];
+    this.searchNote = result.display_name.split(',')[0]?.trim() || result.display_name;
     this.searchResults.set([]);
     this.searchOpen.set(false);
   }

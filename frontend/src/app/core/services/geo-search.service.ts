@@ -22,8 +22,9 @@ export class GeoSearchService {
       limit: '5',
       addressdetails: '0'
     };
+    const headers = { 'User-Agent': 'RKOnlineCentre/1.0 (https://keshavsingh.in)' };
     return this.http
-      .get<GeoResult[]>('https://nominatim.openstreetmap.org/search', { params })
+      .get<GeoResult[]>('https://nominatim.openstreetmap.org/search', { params, headers })
       .pipe(catchError(() => of([])));
   }
 }
