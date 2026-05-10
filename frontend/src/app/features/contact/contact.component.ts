@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
 import { AuthService } from '../../core/services/auth.service';
@@ -59,8 +59,6 @@ import { SocialProvider } from '../../core/models/api.models';
   `
 })
 export class ContactComponent implements OnInit {
-  @ViewChild(NavbarComponent) navbar?: NavbarComponent;
-
   readonly auth = inject(AuthService);
   readonly providers = signal<SocialProvider[]>([]);
   readonly providersLoading = signal(false);
@@ -95,7 +93,6 @@ export class ContactComponent implements OnInit {
 
   onLogout(): void {
     this.auth.logout();
-    this.navbar?.closePanelAndReset();
   }
 
   onSocialLogin(provider: string): void {

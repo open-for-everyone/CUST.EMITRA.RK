@@ -86,7 +86,7 @@ export class NavbarComponent implements OnChanges {
   signupPassword = '';
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['userName']?.currentValue) {
+    if (changes['userName'] && !changes['userName'].firstChange) {
       this.closePanelAndReset();
     }
   }
