@@ -175,10 +175,6 @@ Workflow: `.github/workflows/deploy-pages.yml`
 - Enable **Pages** in repository settings → source: **GitHub Actions**
 - Push to `main` (touching any UI file) triggers automatic deployment
 
-### Backend → Render (deploy hook)
+### Backend → Render
 
-Workflow: `.github/workflows/deploy-render.yml`
-
-1. In Render, go to your service → **Settings** → **Deploy Hook** → copy the URL.
-2. In GitHub, add the secret `RENDER_DEPLOY_HOOK_URL` with that value.
-3. Pushes to `main` that touch `backend/**` will trigger the Render deploy hook automatically.
+Backend deployment is managed directly in Render using the repository root `Dockerfile`.

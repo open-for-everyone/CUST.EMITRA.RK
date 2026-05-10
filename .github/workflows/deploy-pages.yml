@@ -4,14 +4,7 @@ on:
   push:
     branches: ["main"]
     paths:
-      - "index.html"
-      - "styles.css"
-      - "app.js"
-      - "config.js"
-      - "manifest.webmanifest"
-      - "offline.html"
-      - "service-worker.js"
-      - "icons/**"
+      - "frontend/**"
       - ".github/workflows/deploy-pages.yml"
   workflow_dispatch:
 
@@ -34,20 +27,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./frontend
+
+      - name: Build Angular app
+        run: npm run build
+        working-directory: ./frontend
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
-
-      - name: Prepare static site
-        run: |
-          mkdir -p site/icons
-          cp index.html styles.css app.js config.js manifest.webmanifest offline.html service-worker.js site/
-          cp -r icons/* site/icons/
-          if [ -f CNAME ]; then cp CNAME site/CNAME; fi
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./site
+          path: ./frontend/dist/frontend
 
       - name: Deploy to GitHub Pages
         id: deployment
