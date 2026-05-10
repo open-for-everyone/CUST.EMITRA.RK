@@ -5,3 +5,8 @@
 # User-specific files
 *.user
 *.suo
+
+# SQLite runtime database files
+*.db
+*.db-shm
+*.db-wal

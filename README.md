@@ -6,6 +6,54 @@ Features: component-based Angular UI, latest updates from API, Google Gemini AI 
 
 ---
 
+## Modernization scope and success metrics
+
+### Priority user journeys
+
+1. **Home**: discover services and latest updates quickly.
+2. **Contact**: reach support via map, WhatsApp, or email.
+3. **Auth**: secure signup/login/social auth flow.
+4. **Chat**: get guided service answers from AI assistant.
+5. **Activity**: review login and action history.
+
+### Target devices
+
+- Android mobile (primary)
+- iOS mobile (primary)
+- Tablet (secondary)
+- Desktop/laptop (secondary)
+
+### Success metrics
+
+| Area | Metric | Target |
+|---|---|---|
+| Performance | Initial frontend JS+CSS payload | ≤ 350 kB raw in production build |
+| API responsiveness | `/api/health` p95 latency | ≤ 200 ms in production |
+| API responsiveness | `/api/updates` p95 latency | ≤ 100 ms in production |
+| UX quality | Critical journey task success (Home→Contact/Auth/Chat) | ≥ 95% |
+| Reliability | Auth/chat/activity error rate | < 1% |
+| Satisfaction | User feedback score | ≥ 4/5 |
+
+### Baseline snapshot (local, 2026-05-10)
+
+- Frontend production build (Angular): **392.75 kB raw**, estimated transfer **103.61 kB**
+- Backend endpoint timings (local dev run):
+  - `GET /api/health`: **~140 ms**
+  - `GET /api/updates`: **~7 ms**
+
+> Baseline values are local-development measurements and should be replaced by staging/production telemetry for release decisions.
+
+### Phase 1 outcome snapshot (local, 2026-05-10)
+
+- Frontend production build (Angular, lazy loaded routes):
+  - Initial total: **318.82 kB raw**, estimated transfer **89.15 kB**
+  - Lazy chunks introduced: Home (**22.54 kB**), Contact (**11.04 kB**), Auth callback (**0.76 kB**)
+- Backend endpoint timings (local dev run, with caching and correlation middleware):
+  - `GET /api/health`: **~82 ms**
+  - `GET /api/updates`: **~7 ms**
+
+---
+
 ## Project structure
 
 ```
@@ -84,8 +132,8 @@ Endpoints exposed:
 - `POST /api/auth/login`
 - `GET  /api/auth/me`
 - `POST /api/chat`
-- `GET  /api/chat/history`
-- `GET  /api/activity`
+- `GET  /api/chat/history?page=1&pageSize=20`
+- `GET  /api/activity?page=1&pageSize=30`
 
 ### 2) Set env vars
 

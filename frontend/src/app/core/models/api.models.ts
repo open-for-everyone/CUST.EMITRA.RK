@@ -31,3 +31,12 @@ export interface SocialProvider {
   key: string;
   displayName: string;
 }
+
+
+export interface PagedResponse<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}

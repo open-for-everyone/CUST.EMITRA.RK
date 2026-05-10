@@ -18,11 +18,21 @@
   </div>
 }
 
-<main class="container page">
+<main id="main-content" class="container page">
   <section class="hero card wide">
     <div class="hero-content">
       <h2>✨ {{ language.t('heroTitle') }}</h2>
       <p>{{ language.t('heroSubtitle') }}</p>
+      <div class="journey-card" aria-label="User journey overview">
+        <h3>{{ language.t('heroJourneyTitle') }}</h3>
+        <ul class="journey-list">
+          <li>{{ language.t('heroJourneyHome') }}</li>
+          <li>{{ language.t('heroJourneyAuth') }}</li>
+          <li>{{ language.t('heroJourneyChat') }}</li>
+          <li>{{ language.t('heroJourneyContact') }}</li>
+          <li>{{ language.t('heroJourneyActivity') }}</li>
+        </ul>
+      </div>
     </div>
   </section>
 

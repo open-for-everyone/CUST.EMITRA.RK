@@ -1,11 +1,15 @@
 import { Routes } from '@angular/router';
-import { HomeComponent } from './features/home/home.component';
-import { AuthCallbackComponent } from './features/auth-callback/auth-callback.component';
-import { ContactComponent } from './features/contact/contact.component';
 
 export const routes: Routes = [
-  { path: '', component: HomeComponent },
-  { path: 'contact', component: ContactComponent },
-  { path: 'auth/callback', component: AuthCallbackComponent },
+  { path: '', loadComponent: () => import('./features/home/home.component').then((m) => m.HomeComponent) },
+  {
+    path: 'contact',
+    loadComponent: () => import('./features/contact/contact.component').then((m) => m.ContactComponent)
+  },
+  {
+    path: 'auth/callback',
+    loadComponent: () =>
+      import('./features/auth-callback/auth-callback.component').then((m) => m.AuthCallbackComponent)
+  },
   { path: '**', redirectTo: '' }
 ];

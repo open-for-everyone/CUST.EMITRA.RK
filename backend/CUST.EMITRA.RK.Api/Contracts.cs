@@ -1,0 +1,11 @@
+record SignupRequest(string Name, string Email, string Password);
+record LoginRequest(string Email, string Password);
+record ChatRequest(string Message);
+record AuthResponse(string Token, string Name, string Email);
+record UserProfileResponse(string Name, string Email, DateTime CreatedAtUtc);
+record ChatResponse(string Reply, DateTime CreatedAtUtc);
+record ChatHistoryItem(string Message, string Reply, DateTime CreatedAtUtc);
+record ActivityItem(string Action, string? Metadata, DateTime CreatedAtUtc);
+record SocialProviderResponse(string Key, string DisplayName);
+record SocialProviderConfig(string Key, string DisplayName, string Scheme);
+record PagedResponse<T>(IReadOnlyList<T> Items, int Page, int PageSize, int TotalCount, int TotalPages);
