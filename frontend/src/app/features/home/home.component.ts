@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
@@ -69,6 +69,8 @@ import { ActivityItem, ChatHistoryItem, SocialProvider } from '../../core/models
   `
 })
 export class HomeComponent implements OnInit {
+  @ViewChild(NavbarComponent) navbar?: NavbarComponent;
+
   readonly auth = inject(AuthService);
   private readonly updatesService = inject(UpdatesService);
   private readonly chatService = inject(ChatService);
@@ -121,6 +123,7 @@ export class HomeComponent implements OnInit {
     this.chatMessages.set([]);
     this.activity.set([]);
     this.chatOpen.set(false);
+    this.navbar?.closePanelAndReset();
   }
 
   onSocialLogin(provider: string): void {

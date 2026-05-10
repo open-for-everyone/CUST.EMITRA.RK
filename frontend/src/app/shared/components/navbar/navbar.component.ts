@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { SocialProvider } from '../../../core/models/api.models';
@@ -67,7 +67,7 @@ import { SocialProvider } from '../../../core/models/api.models';
     </nav>
   `
 })
-export class NavbarComponent {
+export class NavbarComponent implements OnChanges {
   @Input() userName = '';
   @Input() loading = false;
   @Input() providers: SocialProvider[] = [];
@@ -85,18 +85,29 @@ export class NavbarComponent {
   signupEmail = '';
   signupPassword = '';
 
-  togglePanel(): void {
-    const nextState = !this.panelOpen;
-    this.panelOpen = nextState;
-
-    if (!nextState) {
-      this.mode = 'login';
-      this.loginEmail = '';
-      this.loginPassword = '';
-      this.signupName = '';
-      this.signupEmail = '';
-      this.signupPassword = '';
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['userName']?.currentValue) {
+      this.closePanelAndReset();
     }
+  }
+
+  togglePanel(): void {
+    if (this.panelOpen) {
+      this.closePanelAndReset();
+      return;
+    }
+
+    this.panelOpen = true;
+  }
+
+  closePanelAndReset(): void {
+    this.panelOpen = false;
+    this.mode = 'login';
+    this.loginEmail = '';
+    this.loginPassword = '';
+    this.signupName = '';
+    this.signupEmail = '';
+    this.signupPassword = '';
   }
 
   submitLogin(): void {
