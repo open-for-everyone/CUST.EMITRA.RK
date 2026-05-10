@@ -6,6 +6,19 @@
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="/config.js"></script>
+    <script>
+      // Restore the original path encoded by 404.html for GitHub Pages SPA routing.
+      (function () {
+        const params = new URLSearchParams(window.location.search);
+        const p = params.get('p');
+        if (p) {
+          params.delete('p');
+          const remaining = params.toString();
+          const url = p + (remaining ? (p.includes('?') ? '&' : '?') + remaining : '');
+          window.history.replaceState(null, '', url);
+        }
+      })();
+    </script>
   </head>
   <body>
     <app-root></app-root>
