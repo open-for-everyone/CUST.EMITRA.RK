@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CUST EMITRA RK</title>
+    <script>
+      // GitHub Pages SPA redirect:
+      // When GitHub Pages serves a 404 for a deep path, this page encodes
+      // the original path into the query string and redirects to root so
+      // the Angular router can handle it.
+      (function () {
+        const l = window.location;
+        l.replace(
+          l.protocol + '//' + l.host + '/' +
+          '?p=' + encodeURIComponent(l.pathname + l.search) +
+          (l.hash || '')
+        );
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>
