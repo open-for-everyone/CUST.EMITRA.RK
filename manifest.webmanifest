@@ -1,0 +1,9 @@
+{
+  "name": "RK eMitra Services",
+  "short_name": "RK eMitra",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f172a",
+  "description": "Modern mobile-ready eMitra service portal"
+}
