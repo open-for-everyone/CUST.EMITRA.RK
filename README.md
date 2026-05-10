@@ -1,20 +1,18 @@
 # CUST.EMITRA.RK
 
-Modern, mobile-ready eMitra website for **RK** — built with **AngularJS 1.8** on the frontend and **.NET 10** on the backend.
+Modern, mobile-ready eMitra website for **RK** — rebuilt with **Angular 20 (standalone architecture)** on the frontend and **.NET 10** on the backend.
 
-Features: dynamic centre naming, latest updates from the API, Google Gemini AI chatbot, JWT-secured accounts, and activity tracking.
+Features: component-based Angular UI, latest updates from API, Google Gemini AI chatbot, JWT-secured accounts, activity tracking, and social login (Google/Facebook/LinkedIn).
 
 ---
 
 ## Project structure
 
 ```
-/                          ← AngularJS UI (served on GitHub Pages)
-  index.html               ← AngularJS 1.8 single-page app
-  app.js                   ← AngularJS module, services, controller
-  styles.css               ← Modern CSS (dark mode, glassmorphism)
-  config.js                ← Set EMITRA_API_BASE_URL here
-  service-worker.js        ← PWA offline support
+/frontend                  ← Angular 20 UI (standalone components)
+  src/app                  ← feature/core/shared components and services
+  public/config.js         ← Set EMITRA_API_BASE_URL here
+  package.json             ← Angular build/test scripts
   Dockerfile               ← Root Dockerfile for Render (repo-root build context)
 
 backend/CUST.EMITRA.RK.Api/
@@ -33,6 +31,7 @@ backend/CUST.EMITRA.RK.Api/
 |---|---|---|
 | `Jwt__Key` | JWT signing secret — **must be ≥ 32 chars** | `your-very-long-random-secret-here` |
 | `GEMINI_API_KEY` | Google Gemini AI API key (accepted alongside `GoogleAi__ApiKey`) | `AIza...` |
+| `Frontend__BaseUrl` | Frontend URL for secure social auth callback allow-list | `https://your-frontend.example.com` |
 
 ### Optional but recommended
 
@@ -43,6 +42,12 @@ backend/CUST.EMITRA.RK.Api/
 | `ConnectionStrings__DefaultConnection` | SQLite connection string | `Data Source=emitra.db` |
 | `GoogleAi__ApiKey` | Alternative name for Gemini API key | *(same as `GEMINI_API_KEY`)* |
 | `BackendTeam__WebhookUrl` | Webhook URL for activity notifications | *(none)* |
+| `Authentication__Google__ClientId` | Google OAuth client id for social login | *(none)* |
+| `Authentication__Google__ClientSecret` | Google OAuth client secret for social login | *(none)* |
+| `Authentication__Facebook__AppId` | Facebook app id for social login | *(none)* |
+| `Authentication__Facebook__AppSecret` | Facebook app secret for social login | *(none)* |
+| `Authentication__LinkedIn__ClientId` | LinkedIn client id for social login | *(none)* |
+| `Authentication__LinkedIn__ClientSecret` | LinkedIn client secret for social login | *(none)* |
 | `PORT` | Port the API listens on (set automatically by Render) | `10000` |
 
 > **Note on `MONGODB_CONNECTION_STRING`:** The backend currently uses **SQLite**, not MongoDB. The `MONGODB_CONNECTION_STRING` variable is not read by the application. If you want MongoDB support, the data layer would need to be updated.
@@ -59,6 +64,7 @@ Render environment variables use plain names like `Jwt__Key`. ASP.NET Core autom
 | `GoogleAi__ApiKey` | `GoogleAi → ApiKey` |
 | `BackendTeam__WebhookUrl` | `BackendTeam → WebhookUrl` |
 | `ConnectionStrings__DefaultConnection` | `ConnectionStrings → DefaultConnection` |
+| `Frontend__BaseUrl` | `Frontend → BaseUrl` |
 
 ---
 
@@ -92,19 +98,21 @@ export Jwt__Audience="CUST.EMITRA.RK.Client"
 export BackendTeam__WebhookUrl="https://your-webhook-url"
 ```
 
-### 3) Point UI to local backend
+### 3) Point Angular UI to backend
 
-Edit `config.js`:
+Edit `frontend/public/config.js`:
 
 ```js
 window.EMITRA_API_BASE_URL = 'http://localhost:5098';
 ```
 
-### 4) Serve UI
+### 4) Run Angular UI
 
 ```bash
-python3 -m http.server 8080
-# open http://localhost:8080
+cd frontend
+npm install
+npm start
+# open http://localhost:4200
 ```
 
 ---
@@ -148,7 +156,7 @@ docker run -p 10000:10000 \
    | `GEMINI_API_KEY` | Your Google Gemini API key |
 
 4. Click **Deploy**. Render will build the Docker image and start the service.
-5. After the service URL is known (e.g. `https://cust-emitra-rk.onrender.com`), update `config.js`:
+5. After the service URL is known (e.g. `https://cust-emitra-rk.onrender.com`), update `frontend/public/config.js`:
 
 ```js
 window.EMITRA_API_BASE_URL = 'https://cust-emitra-rk.onrender.com';
