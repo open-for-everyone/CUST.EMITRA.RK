@@ -1,4 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { LanguageService } from '../../core/services/language.service';
 
 interface ServiceItem {
@@ -14,12 +15,13 @@ interface ServiceItem {
 })
 export class ServicesComponent {
   readonly language = inject(LanguageService);
+  private readonly router = inject(Router);
   readonly selectedService = signal<ServiceItem | null>(null);
 
   readonly services: ServiceItem[] = [
     {
       icon: '💸',
-      title: { en: 'Money Withdrawal (AEPS)', hi: 'मनी विदड्रॉल (AEPS)' },
+      title: { en: 'Money Withdrawal (AEPS)', hi: 'मनी विड्रॉल (AEPS)' },
       details: {
         en: 'Quick Aadhaar-enabled cash withdrawal and mini statement services.',
         hi: 'आधार आधारित त्वरित नकद निकासी और मिनी स्टेटमेंट सेवा।'
@@ -86,7 +88,7 @@ export class ServicesComponent {
   openContactPage(): void {
     const opened = window.open('/contact', '_blank', 'noopener,noreferrer');
     if (!opened) {
-      window.location.href = '/contact';
+      this.router.navigateByUrl('/contact');
     }
   }
 }
