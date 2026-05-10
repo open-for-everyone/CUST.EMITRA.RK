@@ -195,3 +195,66 @@ input {
   place-items: center;
   min-height: 70vh;
 }
+
+.nav-auth-panel {
+  margin-top: 10px;
+  margin-bottom: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.progress-track {
+  position: sticky;
+  top: 62px;
+  z-index: 25;
+  height: 3px;
+  background: #e0e7ff;
+}
+
+.progress-indicator {
+  height: 100%;
+  width: 35%;
+  background: linear-gradient(90deg, #4f46e5, #22d3ee);
+  animation: loadingSlide 1s linear infinite;
+}
+
+@keyframes loadingSlide {
+  0% {
+    margin-left: -35%;
+  }
+  100% {
+    margin-left: 100%;
+  }
+}
+
+.chat-fab {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 40;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 0;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: #fff;
+  background: linear-gradient(135deg, #4f46e5, #4338ca);
+  box-shadow: 0 10px 28px rgb(79 70 229 / 28%);
+}
+
+.chat-widget {
+  position: fixed;
+  right: 18px;
+  bottom: 82px;
+  z-index: 35;
+  width: min(420px, calc(100vw - 20px));
+}
+
+.chat-widget .card {
+  margin: 0;
+}
+
+.page {
+  padding-bottom: 92px;
+}

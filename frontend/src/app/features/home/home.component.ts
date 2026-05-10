@@ -1,9 +1,8 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
 import { ServicesComponent } from '../services/services.component';
 import { UpdatesComponent } from '../updates/updates.component';
-import { AuthComponent } from '../auth/auth.component';
 import { ChatComponent, ChatMessageVm } from '../chat/chat.component';
 import { ActivityComponent } from '../activity/activity.component';
 import { TechComponent } from '../tech/tech.component';
@@ -16,17 +15,23 @@ import { ActivityItem, ChatHistoryItem, SocialProvider } from '../../core/models
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [
-    NavbarComponent,
-    ServicesComponent,
-    UpdatesComponent,
-    AuthComponent,
-    ChatComponent,
-    ActivityComponent,
-    TechComponent
-  ],
+  imports: [NavbarComponent, ServicesComponent, UpdatesComponent, ChatComponent, ActivityComponent, TechComponent],
   template: `
-    <app-navbar [userName]="auth.user()?.name ?? ''" (logout)="onLogout()" />
+    <app-navbar
+      [userName]="auth.user()?.name ?? ''"
+      [loading]="auth.authLoading()"
+      [providers]="providers()"
+      (logout)="onLogout()"
+      (login)="onLogin($event.email, $event.password)"
+      (signup)="onSignup($event.name, $event.email, $event.password)"
+      (socialLogin)="onSocialLogin($event)"
+    />
+
+    @if (isBusy()) {
+      <div class="progress-track" role="status" aria-label="Loading">
+        <div class="progress-indicator"></div>
+      </div>
+    }
 
     <main class="container page">
       <section class="hero card wide">
@@ -36,23 +41,34 @@ import { ActivityItem, ChatHistoryItem, SocialProvider } from '../../core/models
 
       <app-services />
       <app-updates [updates]="updates()" [loading]="updatesLoading()" />
-      <app-auth
-        [user]="auth.user()"
-        [loading]="auth.authLoading()"
-        [providers]="providers()"
-        (login)="onLogin($event.email, $event.password)"
-        (signup)="onSignup($event.name, $event.email, $event.password)"
-        (socialLogin)="onSocialLogin($event)"
-      />
-      <app-chat
-        [isLoggedIn]="!!auth.user()"
-        [loading]="chatLoading()"
-        [messages]="chatMessages()"
-        (sendMessage)="onSendChat($event)"
-      />
       <app-activity [isLoggedIn]="!!auth.user()" [loading]="activityLoading()" [items]="activity()" />
       <app-tech />
+
+      <section class="card wide">
+        <h2>Contact Us</h2>
+        <p>Need help with payments, forms, or authentication? Reach out to RK eMitra support.</p>
+        <ul>
+          <li><strong>Phone:</strong> +91-90000-00000</li>
+          <li><strong>Email:</strong> support@rkemitra.in</li>
+          <li><strong>Hours:</strong> Mon-Sat, 9:00 AM - 7:00 PM</li>
+        </ul>
+      </section>
     </main>
+
+    <button class="chat-fab" type="button" (click)="toggleChat()" [attr.aria-expanded]="chatOpen()" aria-label="Toggle chatbot">
+      {{ chatOpen() ? '✕' : '💬' }}
+    </button>
+
+    @if (chatOpen()) {
+      <div class="chat-widget">
+        <app-chat
+          [isLoggedIn]="!!auth.user()"
+          [loading]="chatLoading()"
+          [messages]="chatMessages()"
+          (sendMessage)="onSendChat($event)"
+        />
+      </div>
+    }
   `
 })
 export class HomeComponent implements OnInit {
@@ -68,6 +84,11 @@ export class HomeComponent implements OnInit {
   readonly chatLoading = signal(false);
   readonly activity = signal<ActivityItem[]>([]);
   readonly activityLoading = signal(false);
+  readonly chatOpen = signal(false);
+
+  readonly isBusy = computed(
+    () => this.auth.authLoading() || this.updatesLoading() || this.chatLoading() || this.activityLoading()
+  );
 
   ngOnInit(): void {
     this.loadUpdates();
@@ -94,6 +115,7 @@ export class HomeComponent implements OnInit {
     this.auth.logout();
     this.chatMessages.set([]);
     this.activity.set([]);
+    this.chatOpen.set(false);
   }
 
   onSocialLogin(provider: string): void {
@@ -124,6 +146,10 @@ export class HomeComponent implements OnInit {
           ]);
         }
       });
+  }
+
+  toggleChat(): void {
+    this.chatOpen.update((open) => !open);
   }
 
   private loadUpdates(): void {
