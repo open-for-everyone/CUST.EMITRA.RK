@@ -1,4 +1,5 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { finalize } from 'rxjs';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
 import { AuthService } from '../../core/services/auth.service';
 import { SocialProvider } from '../../core/models/api.models';
@@ -18,7 +19,19 @@ import { SocialProvider } from '../../core/models/api.models';
       (socialLogin)="onSocialLogin($event)"
     />
 
+    @if (isBusy()) {
+      <div class="progress-track" role="status" aria-label="Loading">
+        <div class="progress-indicator"></div>
+      </div>
+    }
+
     <main class="container page contact-page">
+      @if (authError()) {
+        <section class="card wide auth-error-card">
+          <p>{{ authError() }}</p>
+        </section>
+      }
+
       <section class="card wide">
         <h2>Contact RK eMitra</h2>
         <p>We are here to help with online services, payments, forms, and account support.</p>
@@ -48,6 +61,10 @@ import { SocialProvider } from '../../core/models/api.models';
 export class ContactComponent implements OnInit {
   readonly auth = inject(AuthService);
   readonly providers = signal<SocialProvider[]>([]);
+  readonly providersLoading = signal(false);
+  readonly authError = signal('');
+
+  readonly isBusy = computed(() => this.auth.authLoading() || this.providersLoading());
 
   readonly contactDetails = [
     { label: 'Phone', value: '+91-141-555-0199' },
@@ -61,11 +78,17 @@ export class ContactComponent implements OnInit {
   }
 
   onLogin(email: string, password: string): void {
-    this.auth.login(email, password).subscribe();
+    this.authError.set('');
+    this.auth.login(email, password).subscribe({
+      error: () => this.authError.set('Login failed. Please check your credentials and try again.')
+    });
   }
 
   onSignup(name: string, email: string, password: string): void {
-    this.auth.signup(name, email, password).subscribe();
+    this.authError.set('');
+    this.auth.signup(name, email, password).subscribe({
+      error: () => this.authError.set('Signup failed. Please verify details and try again.')
+    });
   }
 
   onLogout(): void {
@@ -73,10 +96,18 @@ export class ContactComponent implements OnInit {
   }
 
   onSocialLogin(provider: string): void {
+    this.authError.set('');
     this.auth.startSocialLogin(provider);
   }
 
   private loadProviders(): void {
-    this.auth.getSocialProviders().subscribe((providers) => this.providers.set(providers));
+    this.providersLoading.set(true);
+    this.auth
+      .getSocialProviders()
+      .pipe(finalize(() => this.providersLoading.set(false)))
+      .subscribe({
+        next: (providers) => this.providers.set(providers),
+        error: () => this.providers.set([])
+      });
   }
 }
