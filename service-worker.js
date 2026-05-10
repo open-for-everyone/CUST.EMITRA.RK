@@ -1,9 +1,10 @@
-const CACHE_NAME = 'rk-emitra-v1';
+const CACHE_NAME = 'rk-emitra-v2';
 const ASSETS = [
   '/',
   '/index.html',
   '/offline.html',
   '/styles.css',
+  '/config.js',
   '/app.js',
   '/manifest.webmanifest',
   '/icons/icon-192.png',

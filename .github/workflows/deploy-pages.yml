@@ -1,0 +1,54 @@
+name: Deploy UI to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "index.html"
+      - "styles.css"
+      - "app.js"
+      - "config.js"
+      - "manifest.webmanifest"
+      - "offline.html"
+      - "service-worker.js"
+      - "icons/**"
+      - ".github/workflows/deploy-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Prepare static site
+        run: |
+          mkdir -p site/icons
+          cp index.html styles.css app.js config.js manifest.webmanifest offline.html service-worker.js site/
+          cp -r icons/* site/icons/
+          if [ -f CNAME ]; then cp CNAME site/CNAME; fi
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
