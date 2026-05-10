@@ -24,7 +24,7 @@ By default the API exposes:
 Edit `config.js`:
 
 ```js
-window.EMITRA_API_BASE_URL = 'http://localhost:5000';
+window.EMITRA_API_BASE_URL = 'http://localhost:5098';
 ```
 
 Use the URL shown by `dotnet run` (http endpoint).
