@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>RK eMitra Services</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div class="container">
+        <p class="badge">Modern eMitra Platform</p>
+        <h1><span data-brand>RK</span> eMitra Digital Services</h1>
+        <p class="subtitle">Fast access to money withdrawal, Aadhaar services, bill payments, POP support, and more.</p>
+        <p id="pwaStatus" class="status" hidden></p>
+        <div class="brand-row">
+          <label for="brandInput">Center Name:</label>
+          <input id="brandInput" type="text" value="RK" maxlength="40" />
+        </div>
+      </div>
+    </header>
+
+    <main class="container grid">
+      <section class="card">
+        <h2>Popular Services</h2>
+        <ul>
+          <li>💳 Money Withdrawal (AEPS)</li>
+          <li>🪪 Aadhaar Update & Authentication Services</li>
+          <li>⚡ Electricity, Water, and Mobile Recharge</li>
+          <li>🧾 PAN, Insurance and Certificate Support</li>
+          <li>🏦 POP (Point of Presence) pension assistance</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>What’s New / Latest Updates</h2>
+        <ul id="newsList"></ul>
+      </section>
+
+      <section class="card">
+        <h2>Technology & Deployment</h2>
+        <p>This website is mobile-ready and installable as a lightweight app (PWA approach).</p>
+        <p>If customer records/news need persistence, connect APIs to MongoDB for scalable storage.</p>
+      </section>
+    </main>
+
+    <footer class="container footer">© <span id="year"></span> <span data-brand>RK</span> eMitra</footer>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
