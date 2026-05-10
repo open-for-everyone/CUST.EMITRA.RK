@@ -1,89 +1,245 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" ng-app="emitraApp" ng-controller="AppCtrl as vm" ng-class="{'dark-mode': vm.darkMode}">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0f172a" />
-    <title>RK eMitra Services</title>
+    <title ng-bind="vm.brandName + ' eMitra Services'">RK eMitra Services</title>
     <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" aria-live="polite">
+      <div class="toast" ng-repeat="toast in vm.toasts track by toast.id"
+           ng-class="'toast-' + toast.type"
+           ng-click="vm.dismissToast(toast)">
+        <span class="toast-icon">{{toast.icon}}</span>
+        <span class="toast-msg">{{toast.message}}</span>
+        <button class="toast-close" aria-label="Dismiss">&#x2715;</button>
+      </div>
+    </div>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+      <div class="nav-inner container">
+        <div class="nav-brand">
+          <span class="nav-logo" aria-hidden="true">&#x26A1;</span>
+          <span class="nav-title">{{vm.brandName}} <span class="nav-subtitle">eMitra</span></span>
+        </div>
+        <div class="nav-actions">
+          <span class="nav-user" ng-if="vm.user">
+            <span class="avatar" aria-hidden="true">{{vm.user.name.charAt(0).toUpperCase()}}</span>
+            <span class="nav-username">{{vm.user.name}}</span>
+          </span>
+          <button class="btn-icon" ng-click="vm.toggleDark()" aria-label="Toggle dark mode" title="Toggle dark mode">
+            <span ng-if="!vm.darkMode">&#x1F319;</span>
+            <span ng-if="vm.darkMode">&#x2600;&#xFE0F;</span>
+          </button>
+          <button class="btn-sm btn-danger" ng-if="vm.user" ng-click="vm.logout()">Logout</button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero -->
     <header class="hero">
-      <div class="container">
-        <p class="badge">Modern eMitra Platform</p>
-        <h1><span data-brand>RK</span> eMitra Digital Services</h1>
-        <p class="subtitle">Secure user login, real-time chatbot support, and backend activity tracking in one place.</p>
-        <p id="pwaStatus" class="status" hidden></p>
-        <div class="brand-row">
-          <label for="brandInput">Center Name:</label>
-          <input id="brandInput" type="text" value="RK" maxlength="40" />
+      <div class="container hero-inner">
+        <div class="hero-text">
+          <span class="badge pulse">Modern eMitra Platform</span>
+          <h1>{{vm.brandName}} <span class="hero-accent">eMitra</span> Digital Services</h1>
+          <p class="subtitle">Secure user login, real-time AI chatbot support, and activity tracking &mdash; all in one place.</p>
+          <div class="brand-row">
+            <label for="brandInput">Center Name:</label>
+            <input id="brandInput" type="text" ng-model="vm.brandName" maxlength="40" placeholder="RK" class="input-inline" />
+          </div>
+        </div>
+        <div class="hero-stats">
+          <div class="stat-chip" ng-repeat="stat in vm.heroStats">
+            <span class="stat-icon" aria-hidden="true">{{stat.icon}}</span>
+            <div>
+              <div class="stat-value">{{stat.value}}</div>
+              <div class="stat-label">{{stat.label}}</div>
+            </div>
+          </div>
         </div>
       </div>
     </header>
 
-    <main class="container grid">
+    <main class="container grid" id="main-content">
+
+      <!-- Popular Services -->
       <section class="card">
-        <h2>Popular Services</h2>
-        <ul>
-          <li>💳 Money Withdrawal (AEPS)</li>
-          <li>🪪 Aadhaar Update & Authentication Services</li>
-          <li>⚡ Electricity, Water, and Mobile Recharge</li>
-          <li>🧾 PAN, Insurance and Certificate Support</li>
-          <li>🏦 POP (Point of Presence) pension assistance</li>
+        <div class="card-header">
+          <h2>&#x1F6E0;&#xFE0F; Popular Services</h2>
+        </div>
+        <ul class="service-list">
+          <li ng-repeat="svc in vm.services" class="service-item">
+            <span class="svc-icon" aria-hidden="true">{{svc.icon}}</span>
+            <span>{{svc.label}}</span>
+          </li>
         </ul>
       </section>
 
+      <!-- Latest Updates -->
       <section class="card">
-        <h2>What’s New / Latest Updates</h2>
-        <ul id="newsList"></ul>
+        <div class="card-header">
+          <h2>&#x1F4F0; Latest Updates</h2>
+          <span class="loading-badge" ng-if="vm.updatesLoading">Loading&#x2026;</span>
+        </div>
+        <ul class="update-list" ng-if="vm.updates.length">
+          <li ng-repeat="item in vm.updates" class="update-item">
+            <span class="update-dot" aria-hidden="true"></span>{{item}}
+          </li>
+        </ul>
+        <p class="empty-state" ng-if="!vm.updates.length && !vm.updatesLoading">No updates available.</p>
       </section>
 
+      <!-- Account Access -->
       <section class="card">
-        <h2>Account Access</h2>
-        <p id="authStatus" class="status ok">Not logged in.</p>
-        <div class="split-forms">
-          <form id="signupForm" class="stacked-form">
-            <h3>Sign Up</h3>
-            <input id="signupName" type="text" placeholder="Full name" required />
-            <input id="signupEmail" type="email" placeholder="Email" required />
-            <input id="signupPassword" type="password" placeholder="Password (min 6 chars)" minlength="6" required />
-            <button type="submit">Create Account</button>
+        <div class="card-header">
+          <h2>&#x1F510; Account Access</h2>
+        </div>
+
+        <!-- Logged-in profile view -->
+        <div ng-if="vm.user" class="profile-box">
+          <div class="profile-avatar">{{vm.user.name.charAt(0).toUpperCase()}}</div>
+          <div class="profile-info">
+            <div class="profile-name">{{vm.user.name}}</div>
+            <div class="profile-email">{{vm.user.email}}</div>
+          </div>
+        </div>
+
+        <!-- Auth forms -->
+        <div ng-if="!vm.user">
+          <div class="tab-bar">
+            <button class="tab-btn" ng-class="{active: vm.authTab === 'login'}" ng-click="vm.authTab = 'login'">Login</button>
+            <button class="tab-btn" ng-class="{active: vm.authTab === 'signup'}" ng-click="vm.authTab = 'signup'">Sign Up</button>
+          </div>
+
+          <!-- Login form -->
+          <form ng-if="vm.authTab === 'login'" ng-submit="vm.login()" class="stacked-form" novalidate>
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input type="email" ng-model="vm.loginData.email" placeholder="you@example.com" required autocomplete="email" class="form-input" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <input type="password" ng-model="vm.loginData.password" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;" required autocomplete="current-password" class="form-input" />
+            </div>
+            <button type="submit" class="btn-primary btn-full" ng-disabled="vm.authLoading">
+              <span ng-if="vm.authLoading" class="spinner-sm"></span>
+              <span ng-if="!vm.authLoading">Login</span>
+            </button>
           </form>
 
-          <form id="loginForm" class="stacked-form">
-            <h3>Login</h3>
-            <input id="loginEmail" type="email" placeholder="Email" required />
-            <input id="loginPassword" type="password" placeholder="Password" required />
-            <button type="submit">Login</button>
+          <!-- Signup form -->
+          <form ng-if="vm.authTab === 'signup'" ng-submit="vm.signup()" class="stacked-form" novalidate>
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input type="text" ng-model="vm.signupData.name" placeholder="Your full name" required class="form-input" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input type="email" ng-model="vm.signupData.email" placeholder="you@example.com" required autocomplete="email" class="form-input" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password <span class="hint">(min 6 chars)</span></label>
+              <input type="password" ng-model="vm.signupData.password" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;" minlength="6" required autocomplete="new-password" class="form-input" />
+            </div>
+            <button type="submit" class="btn-primary btn-full" ng-disabled="vm.authLoading">
+              <span ng-if="vm.authLoading" class="spinner-sm"></span>
+              <span ng-if="!vm.authLoading">Create Account</span>
+            </button>
           </form>
         </div>
-        <button id="logoutButton" class="secondary" type="button" hidden>Logout</button>
       </section>
 
+      <!-- AI Chatbot -->
       <section class="card wide-card">
-        <h2>AI Chatbot Assistant</h2>
-        <p class="subtitle small">Login required. Uses Google AI API when configured on backend.</p>
-        <div id="chatMessages" class="chat-box"></div>
-        <form id="chatForm" class="chat-form">
-          <input id="chatInput" type="text" placeholder="Ask about services, forms, or support..." maxlength="500" required />
-          <button type="submit">Send</button>
+        <div class="card-header">
+          <h2>&#x1F916; AI Chatbot Assistant</h2>
+          <span class="loading-badge" ng-if="!vm.user">Login required</span>
+          <span class="loading-badge badge-green" ng-if="vm.user">Active</span>
+        </div>
+        <p class="subtitle small">Powered by Google Gemini AI. Ask about services, forms, or get support.</p>
+
+        <div class="chat-box" id="chatBox">
+          <div ng-repeat="msg in vm.chatMessages track by $index" class="chat-bubble-row" ng-class="msg.role === 'user' ? 'row-user' : 'row-bot'">
+            <div class="chat-bubble" ng-class="msg.role === 'user' ? 'bubble-user' : 'bubble-bot'">
+              <span class="bubble-sender">{{msg.role === 'user' ? (vm.user ? vm.user.name : 'You') : '&#x1F916; Assistant'}}</span>
+              <p class="bubble-text">{{msg.text}}</p>
+              <span class="bubble-time">{{msg.time | date:'shortTime'}}</span>
+            </div>
+          </div>
+          <div ng-if="vm.chatTyping" class="chat-bubble-row row-bot">
+            <div class="chat-bubble bubble-bot typing-indicator">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+          <p class="empty-state" ng-if="!vm.chatMessages.length && !vm.chatTyping">
+            {{vm.user ? 'Start a conversation with the AI assistant.' : 'Please login to use the chatbot.'}}
+          </p>
+        </div>
+
+        <form ng-submit="vm.sendChat()" class="chat-form" ng-if="vm.user">
+          <input type="text" ng-model="vm.chatInput" placeholder="Ask about services, forms, or support&#x2026;" maxlength="500" class="form-input" />
+          <button type="submit" class="btn-primary" ng-disabled="vm.chatLoading || !vm.chatInput.trim()">
+            <span ng-if="vm.chatLoading" class="spinner-sm"></span>
+            <span ng-if="!vm.chatLoading">Send &#x2708;</span>
+          </button>
         </form>
+        <p class="empty-state" ng-if="!vm.user">Login above to start chatting with the AI assistant.</p>
       </section>
 
+      <!-- Activity Log -->
       <section class="card wide-card">
-        <h2>Your Activity</h2>
-        <ul id="activityList"></ul>
+        <div class="card-header">
+          <h2>&#x1F4CB; Your Activity</h2>
+          <button class="btn-ghost btn-sm" ng-if="vm.user" ng-click="vm.refreshActivity()" title="Refresh">&#x21BA; Refresh</button>
+        </div>
+        <div ng-if="vm.activityLoading" class="loading-row">
+          <div class="spinner"></div> Loading activity&#x2026;
+        </div>
+        <ul class="activity-list" ng-if="!vm.activityLoading && vm.activities.length">
+          <li class="activity-item" ng-repeat="item in vm.activities">
+            <span class="activity-badge activity-badge-{{item.action}}">{{item.action.toUpperCase()}}</span>
+            <span class="activity-meta">{{item.metadata || '&mdash;'}}</span>
+            <span class="activity-time">{{item.createdAtUtc | date:'medium'}}</span>
+          </li>
+        </ul>
+        <p class="empty-state" ng-if="!vm.activityLoading && !vm.activities.length">
+          {{vm.user ? 'No activity yet. Try logging in or using the chatbot.' : 'Login to view your activity logs.'}}
+        </p>
       </section>
 
-      <section class="card">
-        <h2>Technology & Deployment</h2>
-        <p>UI deploys on GitHub Pages and backend deploys on Render with Docker support, JWT auth, SQLite persistence, and environment-driven secrets.</p>
+      <!-- Tech stack -->
+      <section class="card tech-card">
+        <div class="card-header">
+          <h2>&#x2699;&#xFE0F; Technology</h2>
+        </div>
+        <div class="tech-grid">
+          <div class="tech-item" ng-repeat="tech in vm.techStack">
+            <span class="tech-icon" aria-hidden="true">{{tech.icon}}</span>
+            <div>
+              <div class="tech-name">{{tech.name}}</div>
+              <div class="tech-desc">{{tech.desc}}</div>
+            </div>
+          </div>
+        </div>
       </section>
+
     </main>
 
-    <footer class="container footer">© <span id="year"></span> <span data-brand>RK</span> eMitra</footer>
+    <footer class="footer container">
+      <p>&#169; {{vm.year}} <strong>{{vm.brandName}}</strong> eMitra &mdash; Built with AngularJS 1.8 &amp; .NET 10</p>
+    </footer>
 
+    <!-- AngularJS 1.8.3 (latest stable release) via Google CDN -->
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
     <script src="/config.js"></script>
     <script src="/app.js"></script>
   </body>
