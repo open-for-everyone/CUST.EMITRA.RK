@@ -354,3 +354,146 @@ input {
   background: #fff1f2;
   color: #991b1b;
 }
+
+textarea {
+  font: inherit;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  resize: vertical;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.hero-content {
+  display: grid;
+  gap: 10px;
+}
+
+.hero-image {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.contact-intro {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 14px;
+  align-items: center;
+}
+
+.contact-intro-image {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.contact-workspace {
+  background: #071a35;
+  border-color: #15345f;
+  color: #e2e8f0;
+}
+
+.contact-workspace h3,
+.contact-workspace p,
+.contact-workspace label,
+.contact-workspace a {
+  color: inherit;
+}
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.contact-map-column,
+.contact-form-column {
+  display: grid;
+  gap: 12px;
+}
+
+.contact-workspace input,
+.contact-workspace textarea {
+  background: #0f2547;
+  color: #e2e8f0;
+  border-color: #244976;
+}
+
+.contact-workspace input::placeholder,
+.contact-workspace textarea::placeholder {
+  color: #94a3b8;
+}
+
+.contact-map {
+  width: 100%;
+  min-height: 320px;
+  border: 1px solid #244976;
+  border-radius: 12px;
+}
+
+.search-row {
+  display: grid;
+}
+
+.map-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.map-actions .btn.ghost {
+  background: #0f2547;
+  color: #7dd3fc;
+  border-color: #244976;
+}
+
+.location-text,
+.contact-note {
+  color: #cbd5e1;
+  font-size: 0.92rem;
+}
+
+.location-error {
+  margin: 0;
+  color: #fca5a5;
+}
+
+.map-links {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.map-links a,
+.direct-email {
+  color: #22d3ee;
+  text-decoration: none;
+}
+
+.contact-form {
+  display: grid;
+  gap: 12px;
+}
+
+.contact-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .hero,
+  .contact-intro,
+  .contact-grid {
+    grid-template-columns: 1fr;
+  }
+}

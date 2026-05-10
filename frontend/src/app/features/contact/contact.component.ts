@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
 import { AuthService } from '../../core/services/auth.service';
@@ -7,7 +8,7 @@ import { SocialProvider } from '../../core/models/api.models';
 @Component({
   selector: 'app-contact',
   standalone: true,
-  imports: [NavbarComponent],
+  imports: [FormsModule, NavbarComponent],
   template: `
     <app-navbar
       [userName]="auth.user()?.name ?? ''"
@@ -32,13 +33,105 @@ import { SocialProvider } from '../../core/models/api.models';
         </section>
       }
 
-      <section class="card wide">
-        <h2>Contact RK eMitra</h2>
-        <p>We are here to help with online services, payments, forms, and account support.</p>
+      <section class="card wide contact-intro">
+        <div>
+          <h2>Get in touch - RK eMitra Online Centre</h2>
+          <p>Reach out for bill payments, certificates, forms, account help, and online citizen services.</p>
+        </div>
+        <img
+          class="contact-intro-image"
+          src="https://github.com/user-attachments/assets/d7d2b46b-fbbd-449a-97b1-04a9b79e4488"
+          alt="RK eMitra online centre contact section preview"
+          loading="lazy"
+        />
+      </section>
+
+      <section class="card wide contact-workspace">
+        <div class="contact-grid">
+          <div class="contact-map-column">
+            <h3>Find our centre</h3>
+            <div class="search-row">
+              <input
+                type="text"
+                placeholder="Search location note"
+                [(ngModel)]="searchNote"
+                name="searchNote"
+                aria-label="Search location note"
+              />
+            </div>
+
+            <iframe
+              class="contact-map"
+              [src]="mapEmbedUrl()"
+              title="RK eMitra location map"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+            ></iframe>
+
+            <div class="map-actions">
+              <button class="btn ghost" type="button" (click)="pinCentre()">Pin centre</button>
+              <button class="btn ghost" type="button" (click)="useMyLocation()">Use my location</button>
+              <button class="btn ghost" type="button" (click)="clearLocation()">Clear</button>
+            </div>
+
+            <p class="location-text">
+              <strong>Current location:</strong>
+              {{ locationLabel() }}
+              @if (locationAccuracy() !== null) {
+                <span> ± {{ locationAccuracy() }} m</span>
+              }
+            </p>
+
+            @if (locationError()) {
+              <p class="location-error">{{ locationError() }}</p>
+            }
+
+            <div class="map-links">
+              <a [href]="mapPageUrl()" target="_blank" rel="noopener noreferrer">Open map</a>
+              <a [href]="directionsUrl()" target="_blank" rel="noopener noreferrer">Directions</a>
+            </div>
+          </div>
+
+          <div class="contact-form-column">
+            <h3>Send a message</h3>
+            <form class="contact-form" (ngSubmit)="sendMessage()">
+              <input
+                type="text"
+                [(ngModel)]="name"
+                name="name"
+                autocomplete="name"
+                required
+                placeholder="Name*"
+              />
+              <input
+                type="email"
+                [(ngModel)]="email"
+                name="email"
+                autocomplete="email"
+                required
+                placeholder="Email*"
+              />
+              <textarea
+                [(ngModel)]="message"
+                name="message"
+                required
+                rows="6"
+                placeholder="Message*"
+              ></textarea>
+              <p class="contact-note">
+                By contacting us, your details are used to respond for RK eMitra Online Centre support.
+              </p>
+              <div class="contact-form-actions">
+                <button class="btn" type="submit">Send Message</button>
+                <a class="direct-email" [href]="directEmailLink()">Email directly</a>
+              </div>
+            </form>
+          </div>
+        </div>
       </section>
 
       <section class="card">
-        <h2>Support Details</h2>
+        <h3>Support Details</h3>
         <ul>
           @for (item of contactDetails; track item.label) {
             <li><strong>{{ item.label }}:</strong> {{ item.value }}</li>
@@ -47,9 +140,9 @@ import { SocialProvider } from '../../core/models/api.models';
       </section>
 
       <section class="card">
-        <h2>Visit Centre</h2>
+        <h3>Visit Centre</h3>
         <ul>
-          <li><strong>Centre Name:</strong> RK eMitra</li>
+          <li><strong>Centre Name:</strong> RK eMitra Online Centre</li>
           <li><strong>Address:</strong> Vaishali Nagar, Jaipur, Rajasthan</li>
           <li><strong>Business Days:</strong> Monday to Saturday</li>
           <li><strong>Business Hours:</strong> 9:00 AM - 7:00 PM</li>
@@ -63,8 +156,48 @@ export class ContactComponent implements OnInit {
   readonly providers = signal<SocialProvider[]>([]);
   readonly providersLoading = signal(false);
   readonly authError = signal('');
+  readonly locationError = signal('');
+  readonly locationAccuracy = signal<number | null>(null);
+
+  readonly centerLat = 26.9124;
+  readonly centerLng = 75.7873;
+  readonly mapLat = signal(this.centerLat);
+  readonly mapLng = signal(this.centerLng);
+
+  name = '';
+  email = '';
+  message = '';
+  searchNote = '';
 
   readonly isBusy = computed(() => this.auth.authLoading() || this.providersLoading());
+
+  readonly locationLabel = computed(() => `${this.mapLat().toFixed(5)}, ${this.mapLng().toFixed(5)}`);
+
+  readonly mapEmbedUrl = computed(() => {
+    const lat = this.mapLat();
+    const lng = this.mapLng();
+    const delta = 0.02;
+    const bbox = `${lng - delta}%2C${lat - delta}%2C${lng + delta}%2C${lat + delta}`;
+    return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lng}`;
+  });
+
+  readonly mapPageUrl = computed(() => {
+    const lat = this.mapLat();
+    const lng = this.mapLng();
+    return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=14/${lat}/${lng}`;
+  });
+
+  readonly directionsUrl = computed(() => {
+    const lat = this.mapLat();
+    const lng = this.mapLng();
+    return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${lat}%2C${lng}%3B${this.centerLat}%2C${this.centerLng}`;
+  });
+
+  readonly directEmailLink = computed(() => {
+    const subject = encodeURIComponent('Support request - RK eMitra Online Centre');
+    const body = encodeURIComponent(`Name: ${this.name}\nEmail: ${this.email}\nLocation: ${this.locationLabel()}\n\nMessage:\n${this.message}`);
+    return `mailto:support@rkemitra.in?subject=${subject}&body=${body}`;
+  });
 
   readonly contactDetails = [
     { label: 'Phone', value: '+91-141-555-0199' },
@@ -98,6 +231,44 @@ export class ContactComponent implements OnInit {
   onSocialLogin(provider: string): void {
     this.authError.set('');
     this.auth.startSocialLogin(provider);
+  }
+
+  pinCentre(): void {
+    this.locationError.set('');
+    this.locationAccuracy.set(null);
+    this.mapLat.set(this.centerLat);
+    this.mapLng.set(this.centerLng);
+  }
+
+  useMyLocation(): void {
+    this.locationError.set('');
+
+    if (!('geolocation' in navigator)) {
+      this.locationError.set('Geolocation is not supported in this browser.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        this.mapLat.set(position.coords.latitude);
+        this.mapLng.set(position.coords.longitude);
+        this.locationAccuracy.set(Math.round(position.coords.accuracy));
+      },
+      () => {
+        this.locationError.set('Unable to access your current location. Please allow location permissions.');
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
+
+  clearLocation(): void {
+    this.pinCentre();
+    this.searchNote = '';
+  }
+
+  sendMessage(): void {
+    const mailto = this.directEmailLink();
+    window.open(mailto, '_self');
   }
 
   private loadProviders(): void {

@@ -36,8 +36,16 @@ import { ActivityItem, ChatHistoryItem, SocialProvider } from '../../core/models
 
     <main class="container page">
       <section class="hero card wide">
-        <h2>Modern eMitra Platform</h2>
-        <p>Angular 20 frontend, improved UI and .NET backend with social sign-in support.</p>
+        <div class="hero-content">
+          <h2>RK eMitra Online Centre</h2>
+          <p>All-in-one portal for citizen services, online forms, bill payments, and secure assistance.</p>
+        </div>
+        <img
+          class="hero-image"
+          src="https://github.com/user-attachments/assets/d7d2b46b-fbbd-449a-97b1-04a9b79e4488"
+          alt="RK eMitra online centre preview"
+          loading="lazy"
+        />
       </section>
 
       <app-services />

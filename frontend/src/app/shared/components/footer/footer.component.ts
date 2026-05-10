@@ -9,8 +9,8 @@ import { RouterLink } from '@angular/router';
     <footer class="site-footer">
       <div class="container footer-grid">
         <section>
-          <h3>RK eMitra</h3>
-          <p>Trusted digital services centre for payments, citizen forms, and account support.</p>
+          <h3>RK eMitra Online Centre</h3>
+          <p>Trusted digital services centre for payments, forms, chatbot support, and citizen service guidance.</p>
         </section>
 
         <section>
@@ -26,7 +26,7 @@ import { RouterLink } from '@angular/router';
           <ul class="footer-list">
             <li>Phone: +91-141-555-0199</li>
             <li>Email: support@rkemitra.in</li>
-            <li>Hours: Mon-Sat, 9:00 AM - 7:00 PM</li>
+            <li>Hours: Mon-Sat, 9:00 AM - 7:00 PM (IST)</li>
           </ul>
         </section>
       </div>
