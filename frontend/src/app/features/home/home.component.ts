@@ -1,9 +1,9 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
 import { ServicesComponent } from '../services/services.component';
 import { UpdatesComponent } from '../updates/updates.component';
-import { AuthComponent } from '../auth/auth.component';
 import { ChatComponent, ChatMessageVm } from '../chat/chat.component';
 import { ActivityComponent } from '../activity/activity.component';
 import { TechComponent } from '../tech/tech.component';
@@ -16,43 +16,64 @@ import { ActivityItem, ChatHistoryItem, SocialProvider } from '../../core/models
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [
-    NavbarComponent,
-    ServicesComponent,
-    UpdatesComponent,
-    AuthComponent,
-    ChatComponent,
-    ActivityComponent,
-    TechComponent
-  ],
+  imports: [RouterLink, NavbarComponent, ServicesComponent, UpdatesComponent, ChatComponent, ActivityComponent, TechComponent],
   template: `
-    <app-navbar [userName]="auth.user()?.name ?? ''" (logout)="onLogout()" />
+    <app-navbar
+      [userName]="auth.user()?.name ?? ''"
+      [loading]="auth.authLoading()"
+      [providers]="providers()"
+      (logout)="onLogout()"
+      (login)="onLogin($event.email, $event.password)"
+      (signup)="onSignup($event.name, $event.email, $event.password)"
+      (socialLogin)="onSocialLogin($event)"
+    />
+
+    @if (isBusy()) {
+      <div class="progress-track" role="status" aria-label="Loading">
+        <div class="progress-indicator"></div>
+      </div>
+    }
 
     <main class="container page">
       <section class="hero card wide">
-        <h2>Modern eMitra Platform</h2>
-        <p>Angular 20 frontend, improved UI and .NET backend with social sign-in support.</p>
+        <div class="hero-content">
+          <h2>RK eMitra Online Centre</h2>
+          <p>All-in-one portal for citizen services, online forms, bill payments, and secure assistance.</p>
+        </div>
+        <img
+          class="hero-image"
+          src="https://github.com/user-attachments/assets/d7d2b46b-fbbd-449a-97b1-04a9b79e4488"
+          alt="RK eMitra online centre preview"
+          loading="lazy"
+        />
       </section>
 
       <app-services />
       <app-updates [updates]="updates()" [loading]="updatesLoading()" />
-      <app-auth
-        [user]="auth.user()"
-        [loading]="auth.authLoading()"
-        [providers]="providers()"
-        (login)="onLogin($event.email, $event.password)"
-        (signup)="onSignup($event.name, $event.email, $event.password)"
-        (socialLogin)="onSocialLogin($event)"
-      />
-      <app-chat
-        [isLoggedIn]="!!auth.user()"
-        [loading]="chatLoading()"
-        [messages]="chatMessages()"
-        (sendMessage)="onSendChat($event)"
-      />
       <app-activity [isLoggedIn]="!!auth.user()" [loading]="activityLoading()" [items]="activity()" />
       <app-tech />
+
+      <section class="card wide contact-cta">
+        <h2>Contact Us</h2>
+        <p>Need help with payments, forms, or authentication? Visit the dedicated contact page.</p>
+        <a class="btn contact-link" routerLink="/contact">Open Contact Page</a>
+      </section>
     </main>
+
+    <button class="chat-fab" type="button" (click)="toggleChat()" [attr.aria-expanded]="chatOpen()" aria-label="Toggle chatbot">
+      {{ chatOpen() ? '✕' : '💬' }}
+    </button>
+
+    @if (chatOpen()) {
+      <div class="chat-widget">
+        <app-chat
+          [isLoggedIn]="!!auth.user()"
+          [loading]="chatLoading()"
+          [messages]="chatMessages()"
+          (sendMessage)="onSendChat($event)"
+        />
+      </div>
+    }
   `
 })
 export class HomeComponent implements OnInit {
@@ -64,10 +85,23 @@ export class HomeComponent implements OnInit {
   readonly updates = signal<string[]>([]);
   readonly updatesLoading = signal(false);
   readonly providers = signal<SocialProvider[]>([]);
+  readonly providersLoading = signal(false);
   readonly chatMessages = signal<ChatMessageVm[]>([]);
   readonly chatLoading = signal(false);
+  readonly chatHistoryLoading = signal(false);
   readonly activity = signal<ActivityItem[]>([]);
   readonly activityLoading = signal(false);
+  readonly chatOpen = signal(false);
+
+  readonly isBusy = computed(
+    () =>
+      this.auth.authLoading() ||
+      this.updatesLoading() ||
+      this.providersLoading() ||
+      this.chatLoading() ||
+      this.chatHistoryLoading() ||
+      this.activityLoading()
+  );
 
   ngOnInit(): void {
     this.loadUpdates();
@@ -94,6 +128,7 @@ export class HomeComponent implements OnInit {
     this.auth.logout();
     this.chatMessages.set([]);
     this.activity.set([]);
+    this.chatOpen.set(false);
   }
 
   onSocialLogin(provider: string): void {
@@ -126,6 +161,10 @@ export class HomeComponent implements OnInit {
       });
   }
 
+  toggleChat(): void {
+    this.chatOpen.update((open) => !open);
+  }
+
   private loadUpdates(): void {
     this.updatesLoading.set(true);
     this.updatesService
@@ -135,7 +174,11 @@ export class HomeComponent implements OnInit {
   }
 
   private loadProviders(): void {
-    this.auth.getSocialProviders().subscribe((providers) => this.providers.set(providers));
+    this.providersLoading.set(true);
+    this.auth
+      .getSocialProviders()
+      .pipe(finalize(() => this.providersLoading.set(false)))
+      .subscribe((providers) => this.providers.set(providers));
   }
 
   private loadAuthorizedData(): void {
@@ -150,10 +193,14 @@ export class HomeComponent implements OnInit {
       return;
     }
 
-    this.chatService.getHistory(token).subscribe({
-      next: (items) => this.chatMessages.set(this.mapHistory(items)),
-      error: () => this.chatMessages.set([])
-    });
+    this.chatHistoryLoading.set(true);
+    this.chatService
+      .getHistory(token)
+      .pipe(finalize(() => this.chatHistoryLoading.set(false)))
+      .subscribe({
+        next: (items) => this.chatMessages.set(this.mapHistory(items)),
+        error: () => this.chatMessages.set([])
+      });
   }
 
   private loadActivity(): void {

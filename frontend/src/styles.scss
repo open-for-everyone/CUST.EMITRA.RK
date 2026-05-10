@@ -195,3 +195,305 @@ input {
   place-items: center;
   min-height: 70vh;
 }
+
+.nav-auth-panel {
+  margin-top: 10px;
+  margin-bottom: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.progress-track {
+  position: sticky;
+  top: 62px;
+  z-index: 25;
+  height: 3px;
+  background: #e0e7ff;
+}
+
+.progress-indicator {
+  height: 100%;
+  width: 35%;
+  background: linear-gradient(90deg, #4f46e5, #22d3ee);
+  animation: loadingSlide 1s linear infinite;
+}
+
+@keyframes loadingSlide {
+  0% {
+    margin-left: -35%;
+  }
+  100% {
+    margin-left: 100%;
+  }
+}
+
+.chat-fab {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 40;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 0;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: #fff;
+  background: linear-gradient(135deg, #4f46e5, #4338ca);
+  box-shadow: 0 10px 28px rgb(79 70 229 / 28%);
+}
+
+.chat-widget {
+  position: fixed;
+  right: 18px;
+  bottom: 82px;
+  z-index: 35;
+  width: min(420px, calc(100vw - 20px));
+}
+
+.chat-widget .card {
+  margin: 0;
+}
+
+.page {
+  padding-bottom: 92px;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-content {
+  flex: 1;
+  min-height: 0;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.brand-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.nav-links {
+  display: flex;
+  gap: 12px;
+}
+
+.nav-link {
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.nav-link:hover {
+  color: var(--accent);
+}
+
+.contact-cta {
+  display: grid;
+  gap: 10px;
+}
+
+.contact-link {
+  text-decoration: none;
+  width: fit-content;
+}
+
+.contact-page {
+  padding-bottom: 28px;
+}
+
+.site-footer {
+  border-top: 1px solid var(--border);
+  background: rgb(255 255 255 / 92%);
+  padding: 20px 0;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.site-footer h3 {
+  margin: 0 0 8px;
+}
+
+.footer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.footer-list a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.footer-list a:hover {
+  color: var(--accent);
+}
+
+@media (max-width: 700px) {
+  .nav-links {
+    display: none;
+  }
+}
+
+.auth-error-card {
+  border-color: #fecaca;
+  background: #fff1f2;
+  color: #991b1b;
+}
+
+textarea {
+  font: inherit;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  resize: vertical;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.hero-content {
+  display: grid;
+  gap: 10px;
+}
+
+.hero-image {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.contact-intro {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 14px;
+  align-items: center;
+}
+
+.contact-intro-image {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.contact-workspace {
+  background: #071a35;
+  border-color: #15345f;
+  color: #e2e8f0;
+}
+
+.contact-workspace h3,
+.contact-workspace p,
+.contact-workspace label,
+.contact-workspace a {
+  color: inherit;
+}
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.contact-map-column,
+.contact-form-column {
+  display: grid;
+  gap: 12px;
+}
+
+.contact-workspace input,
+.contact-workspace textarea {
+  background: #0f2547;
+  color: #e2e8f0;
+  border-color: #244976;
+}
+
+.contact-workspace input::placeholder,
+.contact-workspace textarea::placeholder {
+  color: #94a3b8;
+}
+
+.contact-map {
+  width: 100%;
+  min-height: 320px;
+  border: 1px solid #244976;
+  border-radius: 12px;
+}
+
+.search-row {
+  display: grid;
+}
+
+.map-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.map-actions .btn.ghost {
+  background: #0f2547;
+  color: #7dd3fc;
+  border-color: #244976;
+}
+
+.location-text,
+.contact-note {
+  color: #cbd5e1;
+  font-size: 0.92rem;
+}
+
+.location-error {
+  margin: 0;
+  color: #fca5a5;
+}
+
+.map-links {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.map-links a,
+.direct-email {
+  color: #22d3ee;
+  text-decoration: none;
+}
+
+.contact-form {
+  display: grid;
+  gap: 12px;
+}
+
+.contact-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .hero,
+  .contact-intro,
+  .contact-grid {
+    grid-template-columns: 1fr;
+  }
+}
