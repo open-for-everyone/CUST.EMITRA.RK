@@ -599,23 +599,94 @@ textarea {
 }
 
 /* ── Update announcement banner ─────────────────────────── */
-.announcement-banner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 20px;
-  background: linear-gradient(90deg, #4f46e5, #0ea5e9);
-  color: #fff;
-  font-size: 0.92rem;
-  animation: slideDown 0.35s ease;
+.announcement-bar {
   position: sticky;
   top: 62px;
   z-index: 18;
+  background: linear-gradient(90deg, #4f46e5, #0ea5e9);
+  color: #fff;
 }
 
-@keyframes slideDown {
-  from { transform: translateY(-100%); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
+.announcement-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 20px;
+  background: transparent;
+  border: 0;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.92rem;
+  text-align: left;
+}
+
+.announcement-toggle:hover {
+  background: rgb(255 255 255 / 10%);
+}
+
+.announcement-label {
+  font-weight: 600;
+  flex: 1;
+}
+
+.announcement-count {
+  background: rgb(255 255 255 / 25%);
+  border-radius: 99px;
+  padding: 1px 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.announcement-chevron {
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
+
+.announcement-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 17;
+}
+
+.announcement-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 14%);
+  z-index: 19;
+  list-style: none;
+  margin: 0;
+  padding: 6px 0;
+  display: grid;
+  gap: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  animation: slideDown 0.2s ease;
+}
+
+.announcement-item {
+  width: 100%;
+  padding: 10px 20px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.announcement-item:last-child {
+  border-bottom: 0;
+}
+
+.announcement-item:hover {
+  background: var(--surface-soft);
+  color: var(--accent);
 }
 
 .announcement-icon {
@@ -623,28 +694,38 @@ textarea {
   flex-shrink: 0;
 }
 
-.announcement-text {
-  flex: 1;
+.announcement-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(15 23 42 / 46%);
+  z-index: 70;
 }
 
-.announcement-more {
-  opacity: 0.85;
-  font-size: 0.88rem;
+.announcement-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(520px, calc(100vw - 28px));
+  z-index: 80;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 8px 28px rgb(79 70 229 / 14%);
+  display: grid;
+  gap: 16px;
 }
 
-.announcement-dismiss {
-  background: transparent;
-  border: 1px solid rgb(255 255 255 / 40%);
-  border-radius: 6px;
-  color: #fff;
-  cursor: pointer;
-  padding: 2px 8px;
-  font-size: 0.85rem;
-  flex-shrink: 0;
+.announcement-modal-text {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.6;
 }
 
-.announcement-dismiss:hover {
-  background: rgb(255 255 255 / 15%);
+.announcement-modal-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* ── Activity items ──────────────────────────────────────── */
@@ -703,6 +784,31 @@ textarea {
 .muted-text {
   color: var(--muted);
   font-size: 0.92rem;
+}
+
+/* ── Pagination ──────────────────────────────────────────── */
+.pagination-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.pagination-btn {
+  min-width: 34px;
+  padding: 6px 10px;
+  font-size: 1rem;
+}
+
+.pagination-info {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+/* ── WhatsApp button ─────────────────────────────────────── */
+.whatsapp-btn {
+  background: linear-gradient(135deg, #25d366, #128c7e);
 }
 
 /* ── Location search dropdown ────────────────────────────── */

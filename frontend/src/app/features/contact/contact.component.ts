@@ -175,7 +175,12 @@ export class ContactComponent implements OnInit, OnDestroy {
       return;
     }
 
-    window.location.href = this.getDirectEmailLink();
+    window.open(this.getWhatsAppLink(), '_blank', 'noopener,noreferrer');
+  }
+
+  getWhatsAppLink(): string {
+    const text = this.buildMessageBody();
+    return `https://wa.me/911415550101?text=${encodeURIComponent(text)}`;
   }
 
   getDirectEmailLink(): string {
@@ -184,8 +189,20 @@ export class ContactComponent implements OnInit, OnDestroy {
     return `mailto:support@rkemitra.in?subject=${subject}&body=${body}`;
   }
 
+  private sanitizeField(value: string): string {
+    return value.trim().replace(/[\r\n\t]+/g, ' ');
+  }
+
+  private buildMessageBody(): string {
+    const name = this.sanitizeField(this.name);
+    const email = this.sanitizeField(this.email);
+    return `Hello RK Online Centre,\nName: ${name}\nEmail: ${email}\nLocation: ${this.locationLabel()}\n\nMessage:\n${this.message.trim()}`;
+  }
+
   private buildEmailBody(): string {
-    return `Name: ${this.name}\nEmail: ${this.email}\nLocation: ${this.locationLabel()}\n\nMessage:\n${this.message}`;
+    const name = this.sanitizeField(this.name);
+    const email = this.sanitizeField(this.email);
+    return `Name: ${name}\nEmail: ${email}\nLocation: ${this.locationLabel()}\n\nMessage:\n${this.message.trim()}`;
   }
 
   private loadProviders(): void {

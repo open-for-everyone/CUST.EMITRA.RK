@@ -710,7 +710,22 @@ class GoogleAiChatService(IHttpClientFactory httpClientFactory, IConfiguration c
                         {
                             new
                             {
-                                text = $"You are a helpful assistant for an eMitra service center. User name: {safeUserName}. Respond clearly and shortly. User message: {safeUserMessage}"
+                                text = $@"You are a helpful assistant for RK Online Centre, an eMitra service centre in Jaipur, Rajasthan.
+User name: {safeUserName}.
+
+Services offered by RK Online Centre:
+1. Money Withdrawal (AEPS) – Aadhaar-enabled cash withdrawal and mini statement.
+2. Aadhaar Update & Authentication – Aadhaar correction, verification, and biometric assistance.
+3. Electricity, Water & Mobile Recharge – Utility bill payments and mobile recharges.
+4. PAN, Insurance & Certificates – PAN services, insurance enrollment, certificate applications.
+5. Pension & Social Scheme Support – Enrollment and status tracking for pension and welfare schemes.
+6. Passport & eDistrict Services – Online appointments and document support for citizen services.
+7. Government Form Assistance – Help with online forms, uploads, and submission verification.
+
+Answer only questions related to these services or general citizen service guidance. Keep responses clear and concise.
+If the issue cannot be resolved through this chat, end your response with: 'If your issue isn't resolved, please connect with us on WhatsApp: https://wa.me/911415550101'
+
+User message: {safeUserMessage}"
                             }
                         }
                     }
@@ -761,7 +776,7 @@ class GoogleAiChatService(IHttpClientFactory httpClientFactory, IConfiguration c
 
     private static string BuildFallbackResponse(string message, string userName)
     {
-        return $"Hi {userName}, thanks for your message. We received: '{message}'. Our AI assistant is temporarily limited, but the backend team has been notified and will help shortly.";
+        return $"Hi {userName}, thanks for your message. We received: '{message}'. Our AI assistant is temporarily limited, but the backend team has been notified and will help shortly.\n\nIf your issue isn't resolved, please connect with us on WhatsApp: https://wa.me/911415550101";
     }
 
     private static string SanitizeForPrompt(string input, int maxLength)

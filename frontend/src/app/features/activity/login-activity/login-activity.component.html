@@ -8,7 +8,7 @@
     <p class="muted-text">{{ language.t('loginActivityEmpty') }}</p>
   } @else {
     <ul>
-      @for (item of items; track item.createdAtUtc) {
+      @for (item of pagedItems(); track item.createdAtUtc) {
         <li class="activity-item">
           <span class="activity-badge login-badge">{{ item.action }}</span>
           <span class="activity-meta">{{ item.metadata || '—' }}</span>
@@ -16,5 +16,13 @@
         </li>
       }
     </ul>
+
+    @if (showPagination()) {
+      <div class="pagination-row">
+        <button class="btn ghost pagination-btn" type="button" [disabled]="currentPage() === 1" (click)="prevPage()">‹</button>
+        <span class="pagination-info">{{ currentPage() }} / {{ totalPages() }}</span>
+        <button class="btn ghost pagination-btn" type="button" [disabled]="currentPage() === totalPages()" (click)="nextPage()">›</button>
+      </div>
+    }
   }
 </section>
