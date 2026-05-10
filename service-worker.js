@@ -17,12 +17,20 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((res) => {
       if (res) return res;
-      return fetch(event.request).catch(() =>
-        new Response('Unable to load requested content while offline. Please try again later.', {
+
+      return fetch(event.request).catch(() => {
+        if (event.request.mode === 'navigate') {
+          return new Response('<h1>Offline</h1><p>Unable to load this page while offline.</p>', {
+            status: 503,
+            headers: { 'Content-Type': 'text/html; charset=utf-8' }
+          });
+        }
+
+        return new Response('Unable to load requested content while offline. Please try again later.', {
           status: 503,
           headers: { 'Content-Type': 'text/plain' }
-        })
-      );
+        });
+      });
     })
   );
 });
