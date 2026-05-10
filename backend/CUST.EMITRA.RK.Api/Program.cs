@@ -4,12 +4,21 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
+
+const string ExternalCookieScheme = "ExternalCookie";
+const string GoogleSocialProvider = "google";
+const string FacebookSocialProvider = "facebook";
+const string LinkedInSocialProvider = "linkedin";
 
 builder.Services.AddOpenApi();
 builder.Services.AddCors(options =>
@@ -37,10 +46,20 @@ if (!builder.Environment.IsDevelopment() &&
     throw new InvalidOperationException("Set Jwt__Key environment variable with a strong secret (minimum 32 characters).");
 }
 
+var frontendBaseUrl = builder.Configuration["Frontend:BaseUrl"]?.Trim() ?? "http://localhost:4200";
+var defaultSocialReturnUrl = $"{frontendBaseUrl.TrimEnd('/')}/auth/callback";
+
 var jwtSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 
-builder.Services
-    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+var socialProviders = new List<SocialProviderConfig>();
+
+var authBuilder = builder.Services
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -54,7 +73,93 @@ builder.Services
             IssuerSigningKey = jwtSigningKey,
             ClockSkew = TimeSpan.FromMinutes(1)
         };
+    })
+    .AddCookie(ExternalCookieScheme, options =>
+    {
+        options.Cookie.Name = "emitra.external.auth";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(10);
     });
+
+var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
+var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+{
+    authBuilder.AddGoogle(GoogleSocialProvider, options =>
+    {
+        options.ClientId = googleClientId;
+        options.ClientSecret = googleClientSecret;
+        options.SignInScheme = ExternalCookieScheme;
+        options.CallbackPath = "/signin-google";
+    });
+
+    socialProviders.Add(new SocialProviderConfig(GoogleSocialProvider, "Google", GoogleSocialProvider));
+}
+
+var facebookAppId = builder.Configuration["Authentication:Facebook:AppId"];
+var facebookAppSecret = builder.Configuration["Authentication:Facebook:AppSecret"];
+if (!string.IsNullOrWhiteSpace(facebookAppId) && !string.IsNullOrWhiteSpace(facebookAppSecret))
+{
+    authBuilder.AddFacebook(FacebookSocialProvider, options =>
+    {
+        options.AppId = facebookAppId;
+        options.AppSecret = facebookAppSecret;
+        options.SignInScheme = ExternalCookieScheme;
+        options.CallbackPath = "/signin-facebook";
+        options.Fields.Add("name");
+        options.Fields.Add("email");
+        options.Scope.Add("email");
+    });
+
+    socialProviders.Add(new SocialProviderConfig(FacebookSocialProvider, "Facebook", FacebookSocialProvider));
+}
+
+var linkedInClientId = builder.Configuration["Authentication:LinkedIn:ClientId"];
+var linkedInClientSecret = builder.Configuration["Authentication:LinkedIn:ClientSecret"];
+if (!string.IsNullOrWhiteSpace(linkedInClientId) && !string.IsNullOrWhiteSpace(linkedInClientSecret))
+{
+    authBuilder.AddOAuth(LinkedInSocialProvider, options =>
+    {
+        options.ClientId = linkedInClientId;
+        options.ClientSecret = linkedInClientSecret;
+        options.CallbackPath = "/signin-linkedin";
+        options.SignInScheme = ExternalCookieScheme;
+        options.AuthorizationEndpoint = "https://www.linkedin.com/oauth/v2/authorization";
+        options.TokenEndpoint = "https://www.linkedin.com/oauth/v2/accessToken";
+        options.UserInformationEndpoint = "https://api.linkedin.com/v2/userinfo";
+        options.SaveTokens = true;
+
+        options.Scope.Add("openid");
+        options.Scope.Add("profile");
+        options.Scope.Add("email");
+
+        options.ClaimActions.MapJsonKey(ClaimTypes.NameIdentifier, "sub");
+        options.ClaimActions.MapJsonKey(ClaimTypes.Name, "name");
+        options.ClaimActions.MapJsonKey(ClaimTypes.Email, "email");
+
+        options.Events = new OAuthEvents
+        {
+            OnCreatingTicket = async context =>
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, context.Options.UserInformationEndpoint);
+                request.Headers.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", context.AccessToken);
+
+                using var response = await context.Backchannel.SendAsync(request, context.HttpContext.RequestAborted);
+                response.EnsureSuccessStatusCode();
+
+                var userJson = await response.Content.ReadAsStringAsync(context.HttpContext.RequestAborted);
+                using var userData = JsonDocument.Parse(userJson);
+
+                context.RunClaimActions(userData.RootElement);
+            }
+        };
+    });
+
+    socialProviders.Add(new SocialProviderConfig(LinkedInSocialProvider, "LinkedIn", LinkedInSocialProvider));
+}
 
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<GoogleAiChatService>();
@@ -87,11 +192,125 @@ var updates = new[]
     "Secure user accounts and chatbot support are now available."
 };
 
-app.MapGet("/api/health", () => Results.Ok(new { status = "ok", platform = ".NET 10", auth = "jwt", chatbot = "google-ai-ready" }))
+var socialSchemeLookup = socialProviders
+    .ToDictionary(item => item.Key, item => item.Scheme, StringComparer.OrdinalIgnoreCase);
+
+app.MapGet("/api/health", () => Results.Ok(new { status = "ok", platform = ".NET 10", auth = "jwt-social", chatbot = "google-ai-ready" }))
    .WithName("Health");
 
 app.MapGet("/api/updates", () => Results.Ok(updates))
    .WithName("GetUpdates");
+
+app.MapGet("/api/auth/social/providers", () =>
+{
+    var providers = socialProviders
+        .Select(item => new SocialProviderResponse(item.Key, item.DisplayName))
+        .ToArray();
+
+    return Results.Ok(providers);
+});
+
+app.MapGet("/api/auth/social/{provider}/start", (string provider, string? returnUrl, HttpContext httpContext) =>
+{
+    if (!socialSchemeLookup.TryGetValue(provider, out var scheme))
+    {
+        return Results.NotFound(new { message = "Social provider is not configured." });
+    }
+
+    var safeReturnUrl = SocialReturnUrlResolver.Resolve(returnUrl, defaultSocialReturnUrl);
+    var callbackPath = $"/api/auth/social/{provider}/callback";
+    var redirectUri = QueryHelpers.AddQueryString(callbackPath, "returnUrl", safeReturnUrl);
+
+    var props = new AuthenticationProperties
+    {
+        RedirectUri = redirectUri
+    };
+
+    return Results.Challenge(props, [scheme]);
+});
+
+app.MapGet("/api/auth/social/{provider}/callback", async (
+    string provider,
+    string? returnUrl,
+    HttpContext httpContext,
+    AppDbContext db,
+    BackendTeamNotifier notifier,
+    CancellationToken cancellationToken) =>
+{
+    if (!socialSchemeLookup.ContainsKey(provider))
+    {
+        return Results.NotFound(new { message = "Social provider is not configured." });
+    }
+
+    var safeReturnUrl = SocialReturnUrlResolver.Resolve(returnUrl, defaultSocialReturnUrl);
+    var authResult = await httpContext.AuthenticateAsync(ExternalCookieScheme);
+
+    if (!authResult.Succeeded || authResult.Principal is null)
+    {
+        return Results.Redirect(QueryHelpers.AddQueryString(safeReturnUrl, "error", "social_auth_failed"));
+    }
+
+    var principal = authResult.Principal;
+    var email = principal.FindFirstValue(ClaimTypes.Email)?.Trim().ToLowerInvariant();
+    var name = principal.FindFirstValue(ClaimTypes.Name)?.Trim();
+
+    if (string.IsNullOrWhiteSpace(email))
+    {
+        await httpContext.SignOutAsync(ExternalCookieScheme);
+        return Results.Redirect(QueryHelpers.AddQueryString(safeReturnUrl, "error", "email_not_provided_by_provider"));
+    }
+
+    name = string.IsNullOrWhiteSpace(name)
+        ? SocialReturnUrlResolver.GetDefaultDisplayName(email)
+        : name;
+
+    var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
+    if (user is null)
+    {
+        user = new AppUser
+        {
+            Name = name,
+            Email = email,
+            PasswordHash = PasswordHasher.Hash(Guid.NewGuid().ToString("N"))
+        };
+
+        db.Users.Add(user);
+        await db.SaveChangesAsync(cancellationToken);
+
+        db.ActivityLogs.Add(new ActivityLog
+        {
+            UserId = user.Id,
+            Action = "social-signup",
+            Metadata = $"Created account with {provider}"
+        });
+
+        await db.SaveChangesAsync(cancellationToken);
+        await notifier.NotifyAsync("social-signup", user.Id, $"User signed up with {provider}", cancellationToken);
+    }
+    else
+    {
+        if (!string.Equals(user.Name, name, StringComparison.Ordinal))
+        {
+            user.Name = name;
+        }
+
+        db.ActivityLogs.Add(new ActivityLog
+        {
+            UserId = user.Id,
+            Action = "social-login",
+            Metadata = $"Logged in with {provider}"
+        });
+
+        await db.SaveChangesAsync(cancellationToken);
+        await notifier.NotifyAsync("social-login", user.Id, $"User logged in with {provider}", cancellationToken);
+    }
+
+    var token = JwtTokenFactory.Create(user, jwtIssuer, jwtAudience, jwtSigningKey);
+
+    await httpContext.SignOutAsync(ExternalCookieScheme);
+    var redirect = QueryHelpers.AddQueryString(safeReturnUrl, "token", token);
+    return Results.Redirect(redirect);
+});
 
 app.MapPost("/api/auth/signup", async (
     SignupRequest request,
@@ -300,6 +519,8 @@ record UserProfileResponse(string Name, string Email, DateTime CreatedAtUtc);
 record ChatResponse(string Reply, DateTime CreatedAtUtc);
 record ChatHistoryItem(string Message, string Reply, DateTime CreatedAtUtc);
 record ActivityItem(string Action, string? Metadata, DateTime CreatedAtUtc);
+record SocialProviderResponse(string Key, string DisplayName);
+record SocialProviderConfig(string Key, string DisplayName, string Scheme);
 
 class AppUser
 {
@@ -411,6 +632,50 @@ static class ClaimsPrincipalExtensions
     {
         var raw = principal.FindFirstValue(ClaimTypes.NameIdentifier);
         return int.TryParse(raw, out var userId) ? userId : null;
+    }
+}
+
+static class SocialReturnUrlResolver
+{
+    public static string Resolve(string? rawReturnUrl, string defaultReturnUrl)
+    {
+        if (string.IsNullOrWhiteSpace(rawReturnUrl))
+        {
+            return defaultReturnUrl;
+        }
+
+        if (!Uri.TryCreate(rawReturnUrl, UriKind.Absolute, out var returnUri) ||
+            !Uri.TryCreate(defaultReturnUrl, UriKind.Absolute, out var allowedBaseUri))
+        {
+            return defaultReturnUrl;
+        }
+
+        var isHttps = string.Equals(returnUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+        var isLocalhost = string.Equals(returnUri.Host, "localhost", StringComparison.OrdinalIgnoreCase);
+        if (!isHttps && !isLocalhost)
+        {
+            return defaultReturnUrl;
+        }
+
+        var allowedHostMatches = string.Equals(returnUri.Host, allowedBaseUri.Host, StringComparison.OrdinalIgnoreCase);
+        var localhostMatches = isLocalhost;
+        if (!allowedHostMatches && !localhostMatches)
+        {
+            return defaultReturnUrl;
+        }
+
+        return rawReturnUrl;
+    }
+
+    public static string GetDefaultDisplayName(string email)
+    {
+        if (!email.Contains('@', StringComparison.Ordinal))
+        {
+            return "User";
+        }
+
+        var candidate = email.Split('@', 2, StringSplitOptions.TrimEntries)[0];
+        return string.IsNullOrWhiteSpace(candidate) ? "User" : candidate;
     }
 }
 
