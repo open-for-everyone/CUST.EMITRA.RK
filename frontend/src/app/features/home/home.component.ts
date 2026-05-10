@@ -11,6 +11,7 @@ import { UpdatesService } from '../../core/services/updates.service';
 import { ChatService } from '../../core/services/chat.service';
 import { ActivityService } from '../../core/services/activity.service';
 import { ActivityItem, ChatHistoryItem, SocialProvider } from '../../core/models/api.models';
+import { LanguageService } from '../../core/services/language.service';
 
 @Component({
   selector: 'app-home',
@@ -34,6 +35,8 @@ export class HomeComponent implements OnInit {
   readonly activity = signal<ActivityItem[]>([]);
   readonly activityLoading = signal(false);
   readonly chatOpen = signal(false);
+  readonly authError = signal('');
+  readonly language = inject(LanguageService);
 
   readonly isBusy = computed(
     () =>
@@ -55,19 +58,24 @@ export class HomeComponent implements OnInit {
   }
 
   onLogin(email: string, password: string): void {
-    this.auth.login(email, password).subscribe(() => {
-      this.loadAuthorizedData();
+    this.authError.set('');
+    this.auth.login(email, password).subscribe({
+      next: () => this.loadAuthorizedData(),
+      error: () => this.authError.set(this.language.t('authLoginFailed'))
     });
   }
 
   onSignup(name: string, email: string, password: string): void {
-    this.auth.signup(name, email, password).subscribe(() => {
-      this.loadAuthorizedData();
+    this.authError.set('');
+    this.auth.signup(name, email, password).subscribe({
+      next: () => this.loadAuthorizedData(),
+      error: () => this.authError.set(this.language.t('authSignupFailed'))
     });
   }
 
   onLogout(): void {
     this.auth.logout();
+    this.authError.set('');
     this.chatMessages.set([]);
     this.activity.set([]);
     this.chatOpen.set(false);

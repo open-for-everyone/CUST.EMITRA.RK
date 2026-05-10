@@ -1,19 +1,35 @@
 <nav class="navbar">
   <div class="container nav-content">
     <div class="nav-left">
-      <h1><a class="brand-link" routerLink="/">RK Online Centre</a></h1>
+      <h1>
+        <a class="brand-link" routerLink="/">
+          <img class="brand-logo" src="/logo.svg" alt="RK logo" />
+          <span>{{ language.t('brandName') }}</span>
+        </a>
+      </h1>
       <div class="nav-links">
-        <a class="nav-link" routerLink="/">Home</a>
-        <a class="nav-link" routerLink="/contact">Contact Us</a>
+        <a class="nav-link" routerLink="/">{{ language.t('navHome') }}</a>
+        <a class="nav-link" routerLink="/contact">{{ language.t('navContact') }}</a>
       </div>
     </div>
 
     <div class="nav-actions">
+      <label class="lang-picker" for="ui-language">{{ language.t('navLanguage') }}</label>
+      <select
+        id="ui-language"
+        name="uiLanguage"
+        class="lang-select"
+        [ngModel]="language.language()"
+        (ngModelChange)="onLanguageChange($event)"
+      >
+        <option value="en">English</option>
+        <option value="hi">हिन्दी</option>
+      </select>
       @if (userName) {
         <span class="chip">{{ userName }}</span>
-        <button class="btn ghost" type="button" (click)="logout.emit()">Logout</button>
+        <button class="btn ghost" type="button" (click)="logout.emit()">{{ language.t('navLogout') }}</button>
       } @else {
-        <button class="btn ghost" type="button" (click)="togglePanel()">Login</button>
+        <button class="btn ghost" type="button" (click)="togglePanel()">{{ language.t('navLogin') }}</button>
       }
     </div>
   </div>
@@ -21,28 +37,72 @@
   @if (!userName && panelOpen) {
     <div class="container nav-auth-panel card">
       <div class="tabs">
-        <button class="btn ghost" type="button" [class.active]="mode === 'login'" (click)="mode = 'login'">Login</button>
-        <button class="btn ghost" type="button" [class.active]="mode === 'signup'" (click)="mode = 'signup'">Sign Up</button>
+        <button class="btn ghost" type="button" [class.active]="mode === 'login'" (click)="mode = 'login'">
+          {{ language.t('navLogin') }}
+        </button>
+        <button class="btn ghost" type="button" [class.active]="mode === 'signup'" (click)="mode = 'signup'">
+          {{ language.t('navSignUp') }}
+        </button>
       </div>
 
       @if (mode === 'login') {
         <form (ngSubmit)="submitLogin()" class="form">
-          <input [(ngModel)]="loginEmail" name="loginEmail" type="email" autocomplete="email" required placeholder="Email" />
-          <input [(ngModel)]="loginPassword" name="loginPassword" type="password" autocomplete="current-password" required placeholder="Password" />
-          <button class="btn" [disabled]="loading">Login</button>
+          <input
+            [(ngModel)]="loginEmail"
+            name="loginEmail"
+            type="email"
+            autocomplete="email"
+            required
+            [placeholder]="language.t('authEmail')"
+          />
+          <input
+            [(ngModel)]="loginPassword"
+            name="loginPassword"
+            type="password"
+            autocomplete="current-password"
+            required
+            [placeholder]="language.t('authPassword')"
+          />
+          <button class="btn" [disabled]="loading">{{ language.t('navLogin') }}</button>
         </form>
       } @else {
         <form (ngSubmit)="submitSignup()" class="form">
-          <input [(ngModel)]="signupName" name="signupName" type="text" autocomplete="name" required placeholder="Full Name" />
-          <input [(ngModel)]="signupEmail" name="signupEmail" type="email" autocomplete="email" required placeholder="Email" />
-          <input [(ngModel)]="signupPassword" name="signupPassword" type="password" autocomplete="new-password" minlength="6" required placeholder="Password" />
-          <button class="btn" [disabled]="loading">Create Account</button>
+          <input
+            [(ngModel)]="signupName"
+            name="signupName"
+            type="text"
+            autocomplete="name"
+            required
+            [placeholder]="language.t('authFullName')"
+          />
+          <input
+            [(ngModel)]="signupEmail"
+            name="signupEmail"
+            type="email"
+            autocomplete="email"
+            required
+            [placeholder]="language.t('authEmail')"
+          />
+          <input
+            [(ngModel)]="signupPassword"
+            name="signupPassword"
+            type="password"
+            autocomplete="new-password"
+            minlength="6"
+            required
+            [placeholder]="language.t('authPassword')"
+          />
+          <button class="btn" [disabled]="loading">{{ language.t('authCreateAccount') }}</button>
         </form>
+      }
+
+      @if (authError) {
+        <p class="auth-error">{{ authError }}</p>
       }
 
       @if (providers.length) {
         <div class="social">
-          <p>Or continue with</p>
+          <p>{{ language.t('authOrContinue') }}</p>
           <div class="social-buttons">
             @for (provider of providers; track provider.key) {
               <button class="btn social-btn" type="button" (click)="socialLogin.emit(provider.key)">

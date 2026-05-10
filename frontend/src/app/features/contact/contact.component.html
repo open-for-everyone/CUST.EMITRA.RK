@@ -2,6 +2,7 @@
   [userName]="auth.user()?.name ?? ''"
   [loading]="auth.authLoading()"
   [providers]="providers()"
+  [authError]="authError()"
   (logout)="onLogout()"
   (login)="onLogin($event.email, $event.password)"
   (signup)="onSignup($event.name, $event.email, $event.password)"

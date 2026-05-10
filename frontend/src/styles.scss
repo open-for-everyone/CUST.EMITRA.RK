@@ -188,6 +188,7 @@ input {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .callback {
@@ -279,6 +280,28 @@ input {
 .brand-link {
   color: inherit;
   text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+}
+
+.lang-picker {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.lang-select {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: #fff;
+  color: var(--text);
 }
 
 .nav-links {
@@ -366,7 +389,7 @@ textarea {
 
 .hero {
   display: grid;
-  grid-template-columns: 1.5fr 1fr;
+  grid-template-columns: 1fr;
   gap: 16px;
   align-items: center;
 }
@@ -380,6 +403,67 @@ textarea {
   width: 100%;
   border-radius: 12px;
   border: 1px solid var(--border);
+}
+
+.service-help {
+  margin: 0 0 10px;
+  color: var(--muted);
+}
+
+.service-list {
+  gap: 10px;
+}
+
+.service-item-btn {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.service-item-btn:hover {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+}
+
+.service-icon {
+  font-size: 1.2rem;
+}
+
+.service-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(15 23 42 / 46%);
+  z-index: 70;
+}
+
+.service-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(520px, calc(100vw - 28px));
+  z-index: 80;
+  display: grid;
+  gap: 10px;
+}
+
+.service-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.auth-error {
+  margin: 0;
+  color: var(--danger);
+  font-weight: 500;
 }
 
 .contact-intro {
