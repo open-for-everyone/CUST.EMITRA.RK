@@ -48,9 +48,9 @@ import { ActivityItem, ChatHistoryItem, SocialProvider } from '../../core/models
         <h2>Contact Us</h2>
         <p>Need help with payments, forms, or authentication? Reach out to RK eMitra support.</p>
         <ul>
-          <li><strong>Phone:</strong> +91-90000-00000</li>
-          <li><strong>Email:</strong> support@rkemitra.in</li>
-          <li><strong>Hours:</strong> Mon-Sat, 9:00 AM - 7:00 PM</li>
+          @for (item of contactDetails; track item.label) {
+            <li><strong>{{ item.label }}:</strong> {{ item.value }}</li>
+          }
         </ul>
       </section>
     </main>
@@ -89,6 +89,12 @@ export class HomeComponent implements OnInit {
   readonly isBusy = computed(
     () => this.auth.authLoading() || this.updatesLoading() || this.chatLoading() || this.activityLoading()
   );
+
+  readonly contactDetails = [
+    { label: 'Phone', value: '+91-141-555-0199' },
+    { label: 'Email', value: 'support@rkemitra.in' },
+    { label: 'Hours', value: 'Mon-Sat, 9:00 AM - 7:00 PM' }
+  ];
 
   ngOnInit(): void {
     this.loadUpdates();
