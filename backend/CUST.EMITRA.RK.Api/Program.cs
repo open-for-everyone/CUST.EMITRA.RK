@@ -185,11 +185,8 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowFrontend");
 app.Use(async (context, next) =>
 {
-    var correlationId = context.Request.Headers[CorrelationIdHeader].FirstOrDefault();
-    if (string.IsNullOrWhiteSpace(correlationId))
-    {
-        correlationId = Guid.NewGuid().ToString("N");
-    }
+    var requestCorrelationId = context.Request.Headers[CorrelationIdHeader].FirstOrDefault();
+    var correlationId = CorrelationIdSanitizer.Normalize(requestCorrelationId);
 
     context.Response.Headers[CorrelationIdHeader] = correlationId;
 
@@ -225,7 +222,6 @@ app.MapGet("/api/updates", (IMemoryCache cache) =>
     var payload = cache.GetOrCreate(UpdatesCacheKey, entry =>
     {
         entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2);
-        entry.SlidingExpiration = TimeSpan.FromMinutes(1);
         return updates;
     });
 
