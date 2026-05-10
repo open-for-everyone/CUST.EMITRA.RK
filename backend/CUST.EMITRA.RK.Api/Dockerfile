@@ -1,11 +1,18 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-COPY CUST.EMITRA.RK.Api.csproj ./
-RUN dotnet restore CUST.EMITRA.RK.Api.csproj
-
 COPY . ./
-RUN dotnet publish CUST.EMITRA.RK.Api.csproj -c Release -o /app/publish /p:UseAppHost=false
+RUN if [ -f CUST.EMITRA.RK.Api.csproj ]; then \
+      dotnet restore CUST.EMITRA.RK.Api.csproj; \
+    else \
+      dotnet restore backend/CUST.EMITRA.RK.Api/CUST.EMITRA.RK.Api.csproj; \
+    fi
+
+RUN if [ -f CUST.EMITRA.RK.Api.csproj ]; then \
+      dotnet publish CUST.EMITRA.RK.Api.csproj -c Release -o /app/publish /p:UseAppHost=false; \
+    else \
+      dotnet publish backend/CUST.EMITRA.RK.Api/CUST.EMITRA.RK.Api.csproj -c Release -o /app/publish /p:UseAppHost=false; \
+    fi
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
