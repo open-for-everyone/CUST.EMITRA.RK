@@ -19,12 +19,16 @@ export class LoginActivityComponent {
 
   readonly currentPage = signal(1);
 
-  readonly totalPages = computed(() => Math.max(1, Math.ceil(this.items.length / PAGE_SIZE)));
+  readonly totalPages = computed(() =>
+    this.items.length === 0 ? 0 : Math.ceil(this.items.length / PAGE_SIZE)
+  );
 
   readonly pagedItems = computed(() => {
-    const page = this.currentPage();
+    if (this.items.length === 0) {
+      return [];
+    }
     const total = this.totalPages();
-    const safePage = Math.min(page, total);
+    const safePage = Math.min(Math.max(1, this.currentPage()), total);
     const start = (safePage - 1) * PAGE_SIZE;
     return this.items.slice(start, start + PAGE_SIZE);
   });

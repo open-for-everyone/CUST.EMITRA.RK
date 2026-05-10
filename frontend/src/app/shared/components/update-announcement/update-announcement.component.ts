@@ -35,7 +35,7 @@ export class UpdateAnnouncementComponent implements OnChanges {
   onEscape(): void {
     if (this.selectedUpdate()) {
       this.closeModal();
-    } else {
+    } else if (this.panelOpen()) {
       this.panelOpen.set(false);
     }
   }
