@@ -1,6 +1,4 @@
-import { Component, Input, OnChanges, signal } from '@angular/core';
-
-const SESSION_KEY = 'emitra.announcement.dismissed';
+import { Component, HostListener, Input, OnChanges, signal } from '@angular/core';
 
 @Component({
   selector: 'app-update-announcement',
@@ -10,16 +8,35 @@ const SESSION_KEY = 'emitra.announcement.dismissed';
 export class UpdateAnnouncementComponent implements OnChanges {
   @Input() updates: string[] = [];
 
-  readonly visible = signal(false);
+  readonly panelOpen = signal(false);
+  readonly selectedUpdate = signal<string | null>(null);
 
   ngOnChanges(): void {
-    if (this.updates.length && !sessionStorage.getItem(SESSION_KEY)) {
-      this.visible.set(true);
+    if (!this.updates.length) {
+      this.panelOpen.set(false);
+      this.selectedUpdate.set(null);
     }
   }
 
-  dismiss(): void {
-    this.visible.set(false);
-    sessionStorage.setItem(SESSION_KEY, '1');
+  togglePanel(): void {
+    this.panelOpen.update((open) => !open);
+    this.selectedUpdate.set(null);
+  }
+
+  openUpdate(update: string): void {
+    this.selectedUpdate.set(update);
+  }
+
+  closeModal(): void {
+    this.selectedUpdate.set(null);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.selectedUpdate()) {
+      this.closeModal();
+    } else {
+      this.panelOpen.set(false);
+    }
   }
 }

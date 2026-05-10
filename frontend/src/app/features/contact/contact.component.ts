@@ -175,13 +175,22 @@ export class ContactComponent implements OnInit, OnDestroy {
       return;
     }
 
-    window.location.href = this.getDirectEmailLink();
+    window.open(this.getWhatsAppLink(), '_blank', 'noopener,noreferrer');
+  }
+
+  getWhatsAppLink(): string {
+    const text = this.buildMessageBody();
+    return `https://wa.me/911415550101?text=${encodeURIComponent(text)}`;
   }
 
   getDirectEmailLink(): string {
     const subject = encodeURIComponent('Support request - RK Online Centre');
     const body = encodeURIComponent(this.buildEmailBody());
     return `mailto:support@rkemitra.in?subject=${subject}&body=${body}`;
+  }
+
+  private buildMessageBody(): string {
+    return `Hello RK Online Centre,\nName: ${this.name}\nEmail: ${this.email}\nLocation: ${this.locationLabel()}\n\nMessage:\n${this.message}`;
   }
 
   private buildEmailBody(): string {

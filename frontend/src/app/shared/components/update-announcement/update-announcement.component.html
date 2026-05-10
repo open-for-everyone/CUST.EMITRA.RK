@@ -1,12 +1,45 @@
-@if (visible()) {
-  <div class="announcement-banner" role="status" aria-live="polite">
-    <span class="announcement-icon">🔔</span>
-    <span class="announcement-text">
-      <strong>What's New:</strong> {{ updates[0] }}
-      @if (updates.length > 1) {
-        <span class="announcement-more"> +{{ updates.length - 1 }} more update{{ updates.length > 2 ? 's' : '' }}</span>
-      }
-    </span>
-    <button class="announcement-dismiss" type="button" (click)="dismiss()" aria-label="Dismiss announcement">✕</button>
+@if (updates.length) {
+  <div class="announcement-bar" [class.open]="panelOpen()">
+    <button
+      class="announcement-toggle"
+      type="button"
+      [attr.aria-expanded]="panelOpen()"
+      aria-controls="updates-panel"
+      (click)="togglePanel()"
+    >
+      <span class="announcement-icon">🔔</span>
+      <span class="announcement-label">Latest Updates</span>
+      <span class="announcement-count">{{ updates.length }}</span>
+      <span class="announcement-chevron">{{ panelOpen() ? '▲' : '▼' }}</span>
+    </button>
+
+    @if (panelOpen()) {
+      <div class="announcement-backdrop" (click)="togglePanel()" aria-hidden="true"></div>
+      <ul id="updates-panel" class="announcement-panel" role="list">
+        @for (update of updates; track update) {
+          <li>
+            <button class="announcement-item" type="button" (click)="openUpdate(update)">
+              {{ update }}
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+}
+
+@if (selectedUpdate(); as update) {
+  <div class="announcement-modal-backdrop" (click)="closeModal()" aria-hidden="true"></div>
+  <div
+    class="announcement-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Update details"
+    tabindex="-1"
+  >
+    <p class="announcement-modal-text">{{ update }}</p>
+    <div class="announcement-modal-actions">
+      <button class="btn ghost" type="button" (click)="closeModal()">Close</button>
+    </div>
   </div>
 }
