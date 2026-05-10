@@ -80,6 +80,7 @@ export class HomeComponent implements OnInit {
   readonly providersLoading = signal(false);
   readonly chatMessages = signal<ChatMessageVm[]>([]);
   readonly chatLoading = signal(false);
+  readonly chatHistoryLoading = signal(false);
   readonly activity = signal<ActivityItem[]>([]);
   readonly activityLoading = signal(false);
   readonly chatOpen = signal(false);
@@ -90,6 +91,7 @@ export class HomeComponent implements OnInit {
       this.updatesLoading() ||
       this.providersLoading() ||
       this.chatLoading() ||
+      this.chatHistoryLoading() ||
       this.activityLoading()
   );
 
@@ -183,10 +185,14 @@ export class HomeComponent implements OnInit {
       return;
     }
 
-    this.chatService.getHistory(token).subscribe({
-      next: (items) => this.chatMessages.set(this.mapHistory(items)),
-      error: () => this.chatMessages.set([])
-    });
+    this.chatHistoryLoading.set(true);
+    this.chatService
+      .getHistory(token)
+      .pipe(finalize(() => this.chatHistoryLoading.set(false)))
+      .subscribe({
+        next: (items) => this.chatMessages.set(this.mapHistory(items)),
+        error: () => this.chatMessages.set([])
+      });
   }
 
   private loadActivity(): void {
