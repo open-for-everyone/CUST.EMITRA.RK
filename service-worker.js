@@ -23,11 +23,7 @@ self.addEventListener('fetch', (event) => {
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
-        .then((response) => {
-          const copy = response.clone();
-          event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', copy)));
-          return response;
-        })
+        .then((response) => response)
         .catch(() => caches.match('/offline.html'))
     );
     return;
@@ -38,11 +34,7 @@ self.addEventListener('fetch', (event) => {
       if (res) return res;
 
       return fetch(event.request)
-        .then((response) => {
-          const copy = response.clone();
-          event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)));
-          return response;
-        })
+        .then((response) => response)
         .catch(
           () =>
             new Response('Unable to load requested content while offline. Please try again later.', {
