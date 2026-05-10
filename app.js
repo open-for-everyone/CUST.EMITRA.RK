@@ -47,7 +47,10 @@ function renderUpdates(items) {
 function renderChatLine(label, text) {
   const p = document.createElement('p');
   p.className = 'chat-line';
-  p.innerHTML = `<strong>${label}:</strong> ${text}`;
+  const strong = document.createElement('strong');
+  strong.textContent = `${label}:`;
+  p.appendChild(strong);
+  p.append(` ${text}`);
   chatMessages.appendChild(p);
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }

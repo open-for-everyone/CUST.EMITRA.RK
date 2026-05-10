@@ -31,6 +31,12 @@ builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite(connect
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "CUST.EMITRA.RK.Api";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "CUST.EMITRA.RK.Client";
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "CHANGE_THIS_KEY_IN_ENVIRONMENT_VARIABLE";
+if (!builder.Environment.IsDevelopment() &&
+    (jwtKey == "CHANGE_THIS_KEY_IN_ENVIRONMENT_VARIABLE" || jwtKey.Length < 32))
+{
+    throw new InvalidOperationException("Set Jwt__Key environment variable with a strong secret (minimum 32 characters).");
+}
+
 var jwtSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 
 builder.Services
@@ -136,9 +142,8 @@ app.MapPost("/api/auth/signup", async (
     });
 
     await db.SaveChangesAsync(cancellationToken);
-    await notifier.NotifyAsync("signup", user.Email, "User signed up", cancellationToken);
-
-    logger.LogInformation("New user signup: {Email}", user.Email);
+    await notifier.NotifyAsync("signup", user.Id, "User signed up", cancellationToken);
+    logger.LogInformation("New user signup completed for user ID {UserId}", user.Id);
 
     var token = JwtTokenFactory.Create(user, jwtIssuer, jwtAudience, jwtSigningKey);
     return Results.Ok(new AuthResponse(token, user.Name, user.Email));
@@ -146,6 +151,7 @@ app.MapPost("/api/auth/signup", async (
 
 app.MapPost("/api/auth/login", async (
     LoginRequest request,
+    HttpContext httpContext,
     AppDbContext db,
     BackendTeamNotifier notifier,
     ILoggerFactory loggerFactory,
@@ -158,7 +164,7 @@ app.MapPost("/api/auth/login", async (
 
     if (user is null || !PasswordHasher.Verify(request.Password ?? string.Empty, user.PasswordHash))
     {
-        logger.LogWarning("Failed login attempt for {Email}", normalizedEmail);
+        logger.LogWarning("Failed login attempt from IP {IpAddress}", httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
         return Results.Unauthorized();
     }
 
@@ -170,7 +176,7 @@ app.MapPost("/api/auth/login", async (
     });
 
     await db.SaveChangesAsync(cancellationToken);
-    await notifier.NotifyAsync("login", user.Email, "User logged in", cancellationToken);
+    await notifier.NotifyAsync("login", user.Id, "User logged in", cancellationToken);
 
     var token = JwtTokenFactory.Create(user, jwtIssuer, jwtAudience, jwtSigningKey);
     return Results.Ok(new AuthResponse(token, user.Name, user.Email));
@@ -236,8 +242,8 @@ app.MapPost("/api/chat", [Authorize] async (
 
     await db.SaveChangesAsync(cancellationToken);
 
-    logger.LogInformation("Chat message processed for user {Email}", user.Email);
-    await notifier.NotifyAsync("chat", user.Email, "User chatted with AI assistant", cancellationToken);
+    logger.LogInformation("Chat message processed for user ID {UserId}", user.Id);
+    await notifier.NotifyAsync("chat", user.Id, "User chatted with AI assistant", cancellationToken);
 
     return Results.Ok(new ChatResponse(responseText, DateTime.UtcNow));
 });
@@ -355,7 +361,7 @@ static class PasswordHasher
     public static string Hash(string password)
     {
         var salt = RandomNumberGenerator.GetBytes(16);
-        const int iterations = 100_000;
+        const int iterations = 600_000;
         var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, 32);
         return $"{iterations}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
     }
@@ -422,7 +428,9 @@ class GoogleAiChatService(IHttpClientFactory httpClientFactory, IConfiguration c
         try
         {
             var client = httpClientFactory.CreateClient();
-            var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={apiKey}";
+            var endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+            var safeUserName = SanitizeForPrompt(userName, 80);
+            var safeUserMessage = SanitizeForPrompt(userMessage, 500);
 
             var payload = new
             {
@@ -434,14 +442,20 @@ class GoogleAiChatService(IHttpClientFactory httpClientFactory, IConfiguration c
                         {
                             new
                             {
-                                text = $"You are a helpful assistant for an eMitra service center. User name: {userName}. Respond clearly and shortly. User message: {userMessage}"
+                                text = $"You are a helpful assistant for an eMitra service center. User name: {safeUserName}. Respond clearly and shortly. User message: {safeUserMessage}"
                             }
                         }
                     }
                 }
             };
 
-            using var response = await client.PostAsJsonAsync(endpoint, payload, cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
+            {
+                Content = JsonContent.Create(payload)
+            };
+            request.Headers.Add("X-Goog-Api-Key", apiKey);
+
+            using var response = await client.SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 logger.LogWarning("Google AI request failed with status code {StatusCode}", response.StatusCode);
@@ -481,13 +495,24 @@ class GoogleAiChatService(IHttpClientFactory httpClientFactory, IConfiguration c
     {
         return $"Hi {userName}, thanks for your message. We received: '{message}'. Our AI assistant is temporarily limited, but the backend team has been notified and will help shortly.";
     }
+
+    private static string SanitizeForPrompt(string input, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return "N/A";
+        }
+
+        var normalized = input.Replace("\r", " ").Replace("\n", " ").Replace("\t", " ").Trim();
+        return normalized.Length > maxLength ? normalized[..maxLength] : normalized;
+    }
 }
 
 class BackendTeamNotifier(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<BackendTeamNotifier> logger)
 {
-    public async Task NotifyAsync(string action, string email, string details, CancellationToken cancellationToken)
+    public async Task NotifyAsync(string action, int userId, string details, CancellationToken cancellationToken)
     {
-        logger.LogInformation("User activity: {Action} by {Email} - {Details}", action, email, details);
+        logger.LogInformation("User activity detected. Action: {Action}, UserId: {UserId}", action, userId);
 
         var webhookUrl = configuration["BackendTeam:WebhookUrl"];
         if (string.IsNullOrWhiteSpace(webhookUrl))
@@ -501,7 +526,7 @@ class BackendTeamNotifier(IHttpClientFactory httpClientFactory, IConfiguration c
             var payload = new
             {
                 action,
-                email,
+                userId,
                 details,
                 timestampUtc = DateTime.UtcNow
             };
