@@ -261,7 +261,7 @@ app.MapGet("/api/auth/social/{provider}/callback", async (
     }
 
     name = string.IsNullOrWhiteSpace(name)
-        ? email.Split('@')[0]
+        ? SocialReturnUrlResolver.GetDefaultDisplayName(email)
         : name;
 
     var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
@@ -650,20 +650,32 @@ static class SocialReturnUrlResolver
             return defaultReturnUrl;
         }
 
-        if (!string.Equals(returnUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(returnUri.Host, "localhost", StringComparison.OrdinalIgnoreCase))
+        var isHttps = string.Equals(returnUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+        var isLocalhost = string.Equals(returnUri.Host, "localhost", StringComparison.OrdinalIgnoreCase);
+        if (!isHttps && !isLocalhost)
         {
             return defaultReturnUrl;
         }
 
         var allowedHostMatches = string.Equals(returnUri.Host, allowedBaseUri.Host, StringComparison.OrdinalIgnoreCase);
-        var localhostMatches = string.Equals(returnUri.Host, "localhost", StringComparison.OrdinalIgnoreCase);
+        var localhostMatches = isLocalhost;
         if (!allowedHostMatches && !localhostMatches)
         {
             return defaultReturnUrl;
         }
 
         return rawReturnUrl;
+    }
+
+    public static string GetDefaultDisplayName(string email)
+    {
+        if (!email.Contains('@', StringComparison.Ordinal))
+        {
+            return "User";
+        }
+
+        var candidate = email.Split('@', 2, StringSplitOptions.TrimEntries)[0];
+        return string.IsNullOrWhiteSpace(candidate) ? "User" : candidate;
     }
 }
 

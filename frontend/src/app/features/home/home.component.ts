@@ -176,9 +176,12 @@ export class HomeComponent implements OnInit {
   private mapHistory(items: ChatHistoryItem[]): ChatMessageVm[] {
     return [...items]
       .reverse()
-      .flatMap((item) => [
-        { role: 'user' as const, text: item.message, time: new Date(item.createdAtUtc) },
-        { role: 'bot' as const, text: item.reply, time: new Date(item.createdAtUtc) }
-      ]);
+      .flatMap((item) => {
+        const createdAt = new Date(item.createdAtUtc);
+        return [
+          { role: 'user' as const, text: item.message, time: createdAt },
+          { role: 'bot' as const, text: item.reply, time: new Date(createdAt.getTime() + 1000) }
+        ];
+      });
   }
 }
