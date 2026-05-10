@@ -22,6 +22,7 @@ const string FacebookSocialProvider = "facebook";
 const string LinkedInSocialProvider = "linkedin";
 const string CorrelationIdHeader = "X-Correlation-ID";
 const string UpdatesCacheKey = "api:updates:v1";
+const string DefaultMongoDatabaseName = "emitra";
 
 builder.Services.AddOpenApi();
 builder.Services.AddCors(options =>
@@ -39,12 +40,12 @@ builder.Services.AddMemoryCache();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "Data Source=emitra.db";
-var isMongoConnectionString = IsMongoConnectionString(connectionString);
+var mongoDatabaseName = TryResolveMongoDatabaseName(connectionString);
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    if (isMongoConnectionString)
+    if (mongoDatabaseName is not null)
     {
-        options.UseMongoDB(connectionString, ResolveMongoDatabaseName(connectionString));
+        options.UseMongoDB(connectionString, mongoDatabaseName);
     }
     else
     {
@@ -612,22 +613,36 @@ app.MapGet("/api/activity", [Authorize] async (
 
 app.Run();
 
-static bool IsMongoConnectionString(string connectionString) =>
-    connectionString.StartsWith("mongodb://", StringComparison.OrdinalIgnoreCase) ||
-    connectionString.StartsWith("mongodb+srv://", StringComparison.OrdinalIgnoreCase);
-
-static string ResolveMongoDatabaseName(string connectionString)
+static string? TryResolveMongoDatabaseName(string connectionString)
 {
-    if (!Uri.TryCreate(connectionString, UriKind.Absolute, out var uri))
+    if (!connectionString.StartsWith("mongodb://", StringComparison.OrdinalIgnoreCase) &&
+        !connectionString.StartsWith("mongodb+srv://", StringComparison.OrdinalIgnoreCase))
     {
-        return "emitra";
+        return null;
     }
 
-    var dbName = uri.AbsolutePath.Trim('/');
-    if (string.IsNullOrWhiteSpace(dbName))
+    if (!Uri.TryCreate(connectionString, UriKind.Absolute, out var uri))
     {
-        return "emitra";
+        return DefaultMongoDatabaseName;
+    }
+
+    var dbName = uri.AbsolutePath
+        .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .FirstOrDefault();
+    if (!IsValidMongoDatabaseName(dbName))
+    {
+        return DefaultMongoDatabaseName;
     }
 
     return dbName;
+}
+
+static bool IsValidMongoDatabaseName(string? dbName)
+{
+    if (string.IsNullOrWhiteSpace(dbName) || dbName.Length > 63)
+    {
+        return false;
+    }
+
+    return dbName.IndexOfAny([' ', '/', '\\', '.', '"', '$', '*', '<', '>', ':', '|', '?', '\0']) < 0;
 }
