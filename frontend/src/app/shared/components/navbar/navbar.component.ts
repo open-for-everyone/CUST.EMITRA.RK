@@ -20,6 +20,7 @@ export class NavbarComponent implements OnChanges {
   @Output() login = new EventEmitter<{ email: string; password: string }>();
   @Output() signup = new EventEmitter<{ name: string; email: string; password: string }>();
   @Output() socialLogin = new EventEmitter<string>();
+  @Output() clearAuthError = new EventEmitter<void>();
 
   panelOpen = false;
   mode: 'login' | 'signup' = 'login';
@@ -42,6 +43,7 @@ export class NavbarComponent implements OnChanges {
       return;
     }
 
+    this.clearAuthError.emit();
     this.panelOpen = true;
   }
 
@@ -71,5 +73,10 @@ export class NavbarComponent implements OnChanges {
     if (value === 'en' || value === 'hi') {
       this.language.setLanguage(value as AppLanguage);
     }
+  }
+
+  setMode(mode: 'login' | 'signup'): void {
+    this.mode = mode;
+    this.clearAuthError.emit();
   }
 }

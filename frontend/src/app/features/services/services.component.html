@@ -15,7 +15,14 @@
 
 @if (selectedService(); as item) {
   <div class="service-modal-backdrop" (click)="closeService()"></div>
-  <section class="card service-modal" role="dialog" aria-modal="true" [attr.aria-label]="language.t('serviceModalTitle')">
+  <section
+    class="card service-modal"
+    role="dialog"
+    aria-modal="true"
+    tabindex="0"
+    (keydown.escape)="closeService()"
+    [attr.aria-label]="language.t('serviceModalTitle')"
+  >
     <h3>{{ item.icon }} {{ item.title[language.language()] }}</h3>
     <p>{{ item.details[language.language()] }}</p>
     <div class="service-modal-actions">

@@ -4,6 +4,7 @@
   [providers]="providers()"
   [authError]="authError()"
   (logout)="onLogout()"
+  (clearAuthError)="clearAuthError()"
   (login)="onLogin($event.email, $event.password)"
   (signup)="onSignup($event.name, $event.email, $event.password)"
   (socialLogin)="onSocialLogin($event)"

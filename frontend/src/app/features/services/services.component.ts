@@ -86,6 +86,7 @@ export class ServicesComponent {
   }
 
   openContactPage(): void {
+    this.closeService();
     this.router.navigateByUrl('/contact');
   }
 }

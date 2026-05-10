@@ -37,10 +37,10 @@
   @if (!userName && panelOpen) {
     <div class="container nav-auth-panel card">
       <div class="tabs">
-        <button class="btn ghost" type="button" [class.active]="mode === 'login'" (click)="mode = 'login'">
+        <button class="btn ghost" type="button" [class.active]="mode === 'login'" (click)="setMode('login')">
           {{ language.t('navLogin') }}
         </button>
-        <button class="btn ghost" type="button" [class.active]="mode === 'signup'" (click)="mode = 'signup'">
+        <button class="btn ghost" type="button" [class.active]="mode === 'signup'" (click)="setMode('signup')">
           {{ language.t('navSignUp') }}
         </button>
       </div>

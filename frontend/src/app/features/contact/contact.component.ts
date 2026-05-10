@@ -90,6 +90,10 @@ export class ContactComponent implements OnInit {
     this.auth.startSocialLogin(provider);
   }
 
+  clearAuthError(): void {
+    this.authError.set('');
+  }
+
   pinCenter(): void {
     this.locationError.set('');
     this.locationAccuracy.set(null);

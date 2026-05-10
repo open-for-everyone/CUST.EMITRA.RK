@@ -85,6 +85,10 @@ export class HomeComponent implements OnInit {
     this.auth.startSocialLogin(provider);
   }
 
+  clearAuthError(): void {
+    this.authError.set('');
+  }
+
   onSendChat(message: string): void {
     const token = this.auth.getToken();
     if (!token) {
