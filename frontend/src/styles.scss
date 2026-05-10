@@ -880,3 +880,41 @@ textarea {
 .footer-credit-sep {
   opacity: 0.5;
 }
+
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  background: var(--accent);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 0 0 8px 8px;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: 10px;
+}
+
+.journey-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--surface-soft);
+}
+
+.journey-card h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.journey-list {
+  display: grid;
+  gap: 6px;
+}
+
+.journey-list li {
+  padding: 8px 10px;
+}
