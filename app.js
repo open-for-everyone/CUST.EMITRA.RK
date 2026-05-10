@@ -33,7 +33,7 @@ brandInput.addEventListener('input', (event) => {
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js').catch(() => {
-      // no-op
+      // Silently fail: service workers are a progressive enhancement for supported environments.
     });
   });
 }
