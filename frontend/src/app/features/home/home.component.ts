@@ -6,7 +6,6 @@ import { ServicesComponent } from '../services/services.component';
 import { UpdatesComponent } from '../updates/updates.component';
 import { ChatComponent, ChatMessageVm } from '../chat/chat.component';
 import { ActivityComponent } from '../activity/activity.component';
-import { TechComponent } from '../tech/tech.component';
 import { AuthService } from '../../core/services/auth.service';
 import { UpdatesService } from '../../core/services/updates.service';
 import { ChatService } from '../../core/services/chat.service';
@@ -16,65 +15,8 @@ import { ActivityItem, ChatHistoryItem, SocialProvider } from '../../core/models
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [RouterLink, NavbarComponent, ServicesComponent, UpdatesComponent, ChatComponent, ActivityComponent, TechComponent],
-  template: `
-    <app-navbar
-      [userName]="auth.user()?.name ?? ''"
-      [loading]="auth.authLoading()"
-      [providers]="providers()"
-      (logout)="onLogout()"
-      (login)="onLogin($event.email, $event.password)"
-      (signup)="onSignup($event.name, $event.email, $event.password)"
-      (socialLogin)="onSocialLogin($event)"
-    />
-
-    @if (isBusy()) {
-      <div class="progress-track" role="status" aria-label="Loading">
-        <div class="progress-indicator"></div>
-      </div>
-    }
-
-    <main class="container page">
-      <section class="hero card wide">
-        <div class="hero-content">
-          <h2>RK eMitra Online Centre</h2>
-          <p>All-in-one portal for citizen services, online forms, bill payments, and secure assistance.</p>
-        </div>
-        <img
-          class="hero-image"
-          src="https://github.com/user-attachments/assets/d7d2b46b-fbbd-449a-97b1-04a9b79e4488"
-          alt="RK eMitra online centre preview"
-          loading="lazy"
-        />
-      </section>
-
-      <app-services />
-      <app-updates [updates]="updates()" [loading]="updatesLoading()" />
-      <app-activity [isLoggedIn]="!!auth.user()" [loading]="activityLoading()" [items]="activity()" />
-      <app-tech />
-
-      <section class="card wide contact-cta">
-        <h2>Contact Us</h2>
-        <p>Need help with payments, forms, or authentication? Visit the dedicated contact page.</p>
-        <a class="btn contact-link" routerLink="/contact">Open Contact Page</a>
-      </section>
-    </main>
-
-    <button class="chat-fab" type="button" (click)="toggleChat()" [attr.aria-expanded]="chatOpen()" aria-label="Toggle chatbot">
-      {{ chatOpen() ? '✕' : '💬' }}
-    </button>
-
-    @if (chatOpen()) {
-      <div class="chat-widget">
-        <app-chat
-          [isLoggedIn]="!!auth.user()"
-          [loading]="chatLoading()"
-          [messages]="chatMessages()"
-          (sendMessage)="onSendChat($event)"
-        />
-      </div>
-    }
-  `
+  imports: [RouterLink, NavbarComponent, ServicesComponent, UpdatesComponent, ChatComponent, ActivityComponent],
+  templateUrl: './home.component.html'
 })
 export class HomeComponent implements OnInit {
   readonly auth = inject(AuthService);

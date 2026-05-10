@@ -384,15 +384,11 @@ textarea {
 
 .contact-intro {
   display: grid;
-  grid-template-columns: 1.3fr 1fr;
-  gap: 14px;
-  align-items: center;
+  gap: 8px;
 }
 
-.contact-intro-image {
-  width: 100%;
-  border-radius: 12px;
-  border: 1px solid var(--border);
+.contact-intro h2 {
+  margin-bottom: 4px;
 }
 
 .contact-workspace {
@@ -492,7 +488,6 @@ textarea {
 
 @media (max-width: 900px) {
   .hero,
-  .contact-intro,
   .contact-grid {
     grid-template-columns: 1fr;
   }

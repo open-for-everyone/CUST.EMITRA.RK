@@ -9,147 +9,7 @@ import { SocialProvider } from '../../core/models/api.models';
   selector: 'app-contact',
   standalone: true,
   imports: [FormsModule, NavbarComponent],
-  template: `
-    <app-navbar
-      [userName]="auth.user()?.name ?? ''"
-      [loading]="auth.authLoading()"
-      [providers]="providers()"
-      (logout)="onLogout()"
-      (login)="onLogin($event.email, $event.password)"
-      (signup)="onSignup($event.name, $event.email, $event.password)"
-      (socialLogin)="onSocialLogin($event)"
-    />
-
-    @if (isBusy()) {
-      <div class="progress-track" role="status" aria-label="Loading">
-        <div class="progress-indicator"></div>
-      </div>
-    }
-
-    <main class="container page contact-page">
-      @if (authError()) {
-        <section class="card wide auth-error-card">
-          <p>{{ authError() }}</p>
-        </section>
-      }
-
-      <section class="card wide contact-intro">
-        <div>
-          <h2>Get in touch - RK eMitra Online Centre</h2>
-          <p>Reach out for bill payments, certificates, forms, account help, and online citizen services.</p>
-        </div>
-        <img
-          class="contact-intro-image"
-          src="https://github.com/user-attachments/assets/d7d2b46b-fbbd-449a-97b1-04a9b79e4488"
-          alt="RK eMitra online centre contact section preview"
-          loading="lazy"
-        />
-      </section>
-
-      <section class="card wide contact-workspace">
-        <div class="contact-grid">
-          <div class="contact-map-column">
-            <h3>Find our centre</h3>
-            <div class="search-row">
-              <input
-                type="text"
-                placeholder="Add a location note"
-                [(ngModel)]="searchNote"
-                name="searchNote"
-                aria-label="Search location note"
-              />
-            </div>
-
-            <iframe
-              class="contact-map"
-              [src]="mapEmbedUrl()"
-              title="RK eMitra location map"
-              loading="lazy"
-              referrerpolicy="no-referrer-when-downgrade"
-            ></iframe>
-
-            <div class="map-actions">
-              <button class="btn ghost" type="button" (click)="pinCenter()">Pin centre</button>
-              <button class="btn ghost" type="button" (click)="useMyLocation()">Use my location</button>
-              <button class="btn ghost" type="button" (click)="clearLocation()">Clear</button>
-            </div>
-
-            <p class="location-text">
-              <strong>Current location:</strong>
-              {{ locationLabel() }}
-              @if (locationAccuracy() !== null) {
-                <span> ± {{ locationAccuracy() }} m</span>
-              }
-            </p>
-
-            @if (locationError()) {
-              <p class="location-error">{{ locationError() }}</p>
-            }
-
-            <div class="map-links">
-              <a [href]="mapPageUrl()" target="_blank" rel="noopener noreferrer">Open map</a>
-              <a [href]="directionsUrl()" target="_blank" rel="noopener noreferrer">Directions</a>
-            </div>
-          </div>
-
-          <div class="contact-form-column">
-            <h3>Send a message</h3>
-            <form class="contact-form" #contactForm="ngForm" (ngSubmit)="sendMessage(!!contactForm.valid)">
-              <input
-                type="text"
-                [(ngModel)]="name"
-                name="name"
-                autocomplete="name"
-                required
-                placeholder="Name*"
-              />
-              <input
-                type="email"
-                [(ngModel)]="email"
-                name="email"
-                autocomplete="email"
-                required
-                placeholder="Email*"
-              />
-              <textarea
-                [(ngModel)]="message"
-                name="message"
-                required
-                rows="6"
-                placeholder="Message*"
-              ></textarea>
-              <p class="contact-note">
-                By contacting us, your details are used to respond for RK eMitra Online Centre support.
-              </p>
-              <div class="contact-form-actions">
-                <button class="btn" type="submit">Send Message</button>
-                <a class="direct-email" [href]="getDirectEmailLink()">Email directly</a>
-              </div>
-            </form>
-          </div>
-        </div>
-      </section>
-
-      <section class="card">
-        <h3>Support Details</h3>
-        <ul>
-          @for (item of contactDetails; track item.label) {
-            <li><strong>{{ item.label }}:</strong> {{ item.value }}</li>
-          }
-        </ul>
-      </section>
-
-      <section class="card">
-        <h3>Visit Centre</h3>
-        <ul>
-          <li><strong>Centre Name:</strong> RK eMitra Online Centre</li>
-          <li><strong>Address:</strong> Vaishali Nagar, Jaipur, Rajasthan</li>
-          <li><strong>Business Days:</strong> Monday to Saturday</li>
-          <li><strong>Business Hours:</strong> 9:00 AM - 7:00 PM</li>
-        </ul>
-      </section>
-    </main>
-  `
+  templateUrl: './contact.component.html'
 })
 export class ContactComponent implements OnInit {
   private readonly GEOLOCATION_TIMEOUT_MS = 10000;
@@ -270,7 +130,7 @@ export class ContactComponent implements OnInit {
   }
 
   getDirectEmailLink(): string {
-    const subject = encodeURIComponent('Support request - RK eMitra Online Centre');
+    const subject = encodeURIComponent('Support request - RK Online Centre');
     const body = encodeURIComponent(this.buildEmailBody());
     return `mailto:support@rkemitra.in?subject=${subject}&body=${body}`;
   }

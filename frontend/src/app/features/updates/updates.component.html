@@ -1,0 +1,12 @@
+<section class="card">
+  <h2>Latest Updates</h2>
+  @if (loading) {
+    <p>Loading updates...</p>
+  } @else {
+    <ul>
+      @for (item of updates; track item) {
+        <li>{{ item }}</li>
+      }
+    </ul>
+  }
+</section>

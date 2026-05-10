@@ -3,16 +3,7 @@ import { Component } from '@angular/core';
 @Component({
   selector: 'app-services',
   standalone: true,
-  template: `
-    <section class="card">
-      <h2>Popular Services</h2>
-      <ul>
-        @for (item of services; track item) {
-          <li>{{ item }}</li>
-        }
-      </ul>
-    </section>
-  `
+  templateUrl: './services.component.html'
 })
 export class ServicesComponent {
   readonly services = [
