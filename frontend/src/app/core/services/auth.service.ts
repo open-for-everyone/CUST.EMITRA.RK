@@ -1,5 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import { catchError, map, Observable, of, tap, throwError } from 'rxjs';
+import { catchError, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
 import { ApiService } from './api.service';
 import { AuthResponse, SocialProvider, UserProfile } from '../models/api.models';
 
@@ -32,16 +32,13 @@ export class AuthService {
     this.authLoading.set(true);
     return this.api.post<AuthResponse>('/api/auth/login', { email, password }).pipe(
       tap((response) => this.setToken(response.token)),
-      map(() => ({ name: '', email: '', createdAtUtc: '' } as UserProfile)),
+      switchMap(() => this.initialize()),
       tap(() => this.authLoading.set(false)),
       catchError((error) => {
         this.authLoading.set(false);
         return throwError(() => error);
       }),
-      tap(() => {
-        this.initialize().subscribe();
-      }),
-      map(() => this.user() as UserProfile)
+      map((user) => user as UserProfile)
     );
   }
 
@@ -49,16 +46,13 @@ export class AuthService {
     this.authLoading.set(true);
     return this.api.post<AuthResponse>('/api/auth/signup', { name, email, password }).pipe(
       tap((response) => this.setToken(response.token)),
-      map(() => ({ name: '', email: '', createdAtUtc: '' } as UserProfile)),
+      switchMap(() => this.initialize()),
       tap(() => this.authLoading.set(false)),
       catchError((error) => {
         this.authLoading.set(false);
         return throwError(() => error);
       }),
-      tap(() => {
-        this.initialize().subscribe();
-      }),
-      map(() => this.user() as UserProfile)
+      map((user) => user as UserProfile)
     );
   }
 

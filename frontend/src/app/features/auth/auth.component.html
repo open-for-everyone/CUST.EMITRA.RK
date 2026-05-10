@@ -1,0 +1,37 @@
+<section class="card">
+  <h2>Account Access</h2>
+
+  @if (user) {
+    <p><strong>{{ user.name }}</strong></p>
+    <p>{{ user.email }}</p>
+  } @else {
+    <div class="tabs">
+      <button class="btn ghost" [class.active]="mode === 'login'" (click)="mode = 'login'">Login</button>
+      <button class="btn ghost" [class.active]="mode === 'signup'" (click)="mode = 'signup'">Sign Up</button>
+    </div>
+
+    @if (mode === 'login') {
+      <form (ngSubmit)="submitLogin()" class="form">
+        <input [(ngModel)]="loginEmail" name="loginEmail" type="email" autocomplete="email" required placeholder="Email" />
+        <input [(ngModel)]="loginPassword" name="loginPassword" type="password" autocomplete="current-password" required placeholder="Password" />
+        <button class="btn" [disabled]="loading">Login</button>
+      </form>
+    } @else {
+      <form (ngSubmit)="submitSignup()" class="form">
+        <input [(ngModel)]="signupName" name="signupName" type="text" autocomplete="name" required placeholder="Full Name" />
+        <input [(ngModel)]="signupEmail" name="signupEmail" type="email" autocomplete="email" required placeholder="Email" />
+        <input [(ngModel)]="signupPassword" name="signupPassword" type="password" autocomplete="new-password" minlength="6" required placeholder="Password" />
+        <button class="btn" [disabled]="loading">Create Account</button>
+      </form>
+    }
+
+    <div class="social">
+      <p>Or continue with</p>
+      <div class="social-buttons">
+        @for (provider of providers; track provider.key) {
+          <button class="btn social-btn" (click)="socialLogin.emit(provider.key)">{{ provider.displayName }}</button>
+        }
+      </div>
+    </div>
+  }
+</section>

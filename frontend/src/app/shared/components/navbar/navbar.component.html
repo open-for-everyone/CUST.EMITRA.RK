@@ -1,0 +1,57 @@
+<nav class="navbar">
+  <div class="container nav-content">
+    <div class="nav-left">
+      <h1><a class="brand-link" routerLink="/">RK Online Centre</a></h1>
+      <div class="nav-links">
+        <a class="nav-link" routerLink="/">Home</a>
+        <a class="nav-link" routerLink="/contact">Contact Us</a>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      @if (userName) {
+        <span class="chip">{{ userName }}</span>
+        <button class="btn ghost" type="button" (click)="logout.emit()">Logout</button>
+      } @else {
+        <button class="btn ghost" type="button" (click)="togglePanel()">Login</button>
+      }
+    </div>
+  </div>
+
+  @if (!userName && panelOpen) {
+    <div class="container nav-auth-panel card">
+      <div class="tabs">
+        <button class="btn ghost" type="button" [class.active]="mode === 'login'" (click)="mode = 'login'">Login</button>
+        <button class="btn ghost" type="button" [class.active]="mode === 'signup'" (click)="mode = 'signup'">Sign Up</button>
+      </div>
+
+      @if (mode === 'login') {
+        <form (ngSubmit)="submitLogin()" class="form">
+          <input [(ngModel)]="loginEmail" name="loginEmail" type="email" autocomplete="email" required placeholder="Email" />
+          <input [(ngModel)]="loginPassword" name="loginPassword" type="password" autocomplete="current-password" required placeholder="Password" />
+          <button class="btn" [disabled]="loading">Login</button>
+        </form>
+      } @else {
+        <form (ngSubmit)="submitSignup()" class="form">
+          <input [(ngModel)]="signupName" name="signupName" type="text" autocomplete="name" required placeholder="Full Name" />
+          <input [(ngModel)]="signupEmail" name="signupEmail" type="email" autocomplete="email" required placeholder="Email" />
+          <input [(ngModel)]="signupPassword" name="signupPassword" type="password" autocomplete="new-password" minlength="6" required placeholder="Password" />
+          <button class="btn" [disabled]="loading">Create Account</button>
+        </form>
+      }
+
+      @if (providers.length) {
+        <div class="social">
+          <p>Or continue with</p>
+          <div class="social-buttons">
+            @for (provider of providers; track provider.key) {
+              <button class="btn social-btn" type="button" (click)="socialLogin.emit(provider.key)">
+                {{ provider.displayName }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</nav>
