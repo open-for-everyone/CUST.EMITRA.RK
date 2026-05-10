@@ -94,7 +94,7 @@ import { SocialProvider } from '../../core/models/api.models';
 
           <div class="contact-form-column">
             <h3>Send a message</h3>
-            <form class="contact-form" (ngSubmit)="sendMessage()">
+            <form class="contact-form" #contactForm="ngForm" (ngSubmit)="sendMessage(!!contactForm.valid)">
               <input
                 type="text"
                 [(ngModel)]="name"
@@ -152,7 +152,7 @@ import { SocialProvider } from '../../core/models/api.models';
   `
 })
 export class ContactComponent implements OnInit {
-  private readonly GEOLOCATION_TIMEOUT_MILLISECONDS = 10000;
+  private readonly GEOLOCATION_TIMEOUT_MS = 10000;
   readonly auth = inject(AuthService);
   readonly providers = signal<SocialProvider[]>([]);
   readonly providersLoading = signal(false);
@@ -252,7 +252,7 @@ export class ContactComponent implements OnInit {
       () => {
         this.locationError.set('Unable to access your current location. Please allow location permissions.');
       },
-      { enableHighAccuracy: true, timeout: this.GEOLOCATION_TIMEOUT_MILLISECONDS }
+      { enableHighAccuracy: true, timeout: this.GEOLOCATION_TIMEOUT_MS }
     );
   }
 
@@ -261,9 +261,12 @@ export class ContactComponent implements OnInit {
     this.searchNote = '';
   }
 
-  sendMessage(): void {
-    const mailto = this.getDirectEmailLink();
-    window.open(mailto, '_self');
+  sendMessage(isValid: boolean): void {
+    if (!isValid || !this.name.trim() || !this.email.trim() || !this.message.trim()) {
+      return;
+    }
+
+    window.location.href = this.getDirectEmailLink();
   }
 
   getDirectEmailLink(): string {
