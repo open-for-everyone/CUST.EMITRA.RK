@@ -1,9 +1,9 @@
 <section class="card wide">
-  <h2>Your Activity</h2>
+  <h2>{{ language.t('activityTitle') }}</h2>
   @if (!isLoggedIn) {
-    <p>Login to view activity.</p>
+    <p>{{ language.t('activityLoginPrompt') }}</p>
   } @else if (loading) {
-    <p>Loading activity...</p>
+    <p>{{ language.t('activityLoading') }}</p>
   } @else {
     <ul>
       @for (item of items; track item.createdAtUtc) {

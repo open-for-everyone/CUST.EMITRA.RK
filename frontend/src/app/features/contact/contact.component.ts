@@ -4,6 +4,7 @@ import { finalize } from 'rxjs';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
 import { AuthService } from '../../core/services/auth.service';
 import { SocialProvider } from '../../core/models/api.models';
+import { LanguageService } from '../../core/services/language.service';
 
 @Component({
   selector: 'app-contact',
@@ -14,6 +15,7 @@ import { SocialProvider } from '../../core/models/api.models';
 export class ContactComponent implements OnInit {
   private readonly GEOLOCATION_TIMEOUT_MS = 10000;
   readonly auth = inject(AuthService);
+  readonly language = inject(LanguageService);
   readonly providers = signal<SocialProvider[]>([]);
   readonly providersLoading = signal(false);
   readonly authError = signal('');
@@ -68,14 +70,14 @@ export class ContactComponent implements OnInit {
   onLogin(email: string, password: string): void {
     this.authError.set('');
     this.auth.login(email, password).subscribe({
-      error: () => this.authError.set('Login failed. Please check your credentials and try again.')
+      error: () => this.authError.set(this.language.t('authLoginFailed'))
     });
   }
 
   onSignup(name: string, email: string, password: string): void {
     this.authError.set('');
     this.auth.signup(name, email, password).subscribe({
-      error: () => this.authError.set('Signup failed. Please verify details and try again.')
+      error: () => this.authError.set(this.language.t('authSignupFailed'))
     });
   }
 
@@ -86,6 +88,10 @@ export class ContactComponent implements OnInit {
   onSocialLogin(provider: string): void {
     this.authError.set('');
     this.auth.startSocialLogin(provider);
+  }
+
+  clearAuthError(): void {
+    this.authError.set('');
   }
 
   pinCenter(): void {

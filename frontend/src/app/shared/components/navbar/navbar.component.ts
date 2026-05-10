@@ -1,7 +1,8 @@
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { SocialProvider } from '../../../core/models/api.models';
+import { AppLanguage, LanguageService } from '../../../core/services/language.service';
 
 @Component({
   selector: 'app-navbar',
@@ -13,11 +14,13 @@ export class NavbarComponent implements OnChanges {
   @Input() userName = '';
   @Input() loading = false;
   @Input() providers: SocialProvider[] = [];
+  @Input() authError = '';
 
   @Output() logout = new EventEmitter<void>();
   @Output() login = new EventEmitter<{ email: string; password: string }>();
   @Output() signup = new EventEmitter<{ name: string; email: string; password: string }>();
   @Output() socialLogin = new EventEmitter<string>();
+  @Output() clearAuthError = new EventEmitter<void>();
 
   panelOpen = false;
   mode: 'login' | 'signup' = 'login';
@@ -26,6 +29,7 @@ export class NavbarComponent implements OnChanges {
   signupName = '';
   signupEmail = '';
   signupPassword = '';
+  readonly language = inject(LanguageService);
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['userName'] && !changes['userName'].firstChange) {
@@ -39,6 +43,7 @@ export class NavbarComponent implements OnChanges {
       return;
     }
 
+    this.clearAuthError.emit();
     this.panelOpen = true;
   }
 
@@ -62,5 +67,16 @@ export class NavbarComponent implements OnChanges {
       email: this.signupEmail,
       password: this.signupPassword
     });
+  }
+
+  onLanguageChange(value: string): void {
+    if (value === 'en' || value === 'hi') {
+      this.language.setLanguage(value as AppLanguage);
+    }
+  }
+
+  setMode(mode: 'login' | 'signup'): void {
+    this.mode = mode;
+    this.clearAuthError.emit();
   }
 }

@@ -2,7 +2,9 @@
   [userName]="auth.user()?.name ?? ''"
   [loading]="auth.authLoading()"
   [providers]="providers()"
+  [authError]="authError()"
   (logout)="onLogout()"
+  (clearAuthError)="clearAuthError()"
   (login)="onLogin($event.email, $event.password)"
   (signup)="onSignup($event.name, $event.email, $event.password)"
   (socialLogin)="onSocialLogin($event)"
@@ -17,15 +19,9 @@
 <main class="container page">
   <section class="hero card wide">
     <div class="hero-content">
-      <h2>RK Online Centre</h2>
-      <p>All-in-one portal for citizen services, online forms, bill payments, and secure assistance.</p>
+      <h2>✨ {{ language.t('heroTitle') }}</h2>
+      <p>{{ language.t('heroSubtitle') }}</p>
     </div>
-    <img
-      class="hero-image"
-      src="https://github.com/user-attachments/assets/d7d2b46b-fbbd-449a-97b1-04a9b79e4488"
-      alt="RK Online Centre preview"
-      loading="lazy"
-    />
   </section>
 
   <app-services />
@@ -33,9 +29,9 @@
   <app-activity [isLoggedIn]="!!auth.user()" [loading]="activityLoading()" [items]="activity()" />
 
   <section class="card wide contact-cta">
-    <h2>Contact Us</h2>
-    <p>Need help with payments, forms, or authentication? Visit the dedicated contact page.</p>
-    <a class="btn contact-link" routerLink="/contact">Open Contact Page</a>
+    <h2>📞 {{ language.t('contactCtaTitle') }}</h2>
+    <p>{{ language.t('contactCtaText') }}</p>
+    <a class="btn contact-link" routerLink="/contact">{{ language.t('openContactPage') }}</a>
   </section>
 </main>
 

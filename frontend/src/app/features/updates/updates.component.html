@@ -1,7 +1,7 @@
 <section class="card">
-  <h2>Latest Updates</h2>
+  <h2>{{ language.t('updatesTitle') }}</h2>
   @if (loading) {
-    <p>Loading updates...</p>
+    <p>{{ language.t('updatesLoading') }}</p>
   } @else {
     <ul>
       @for (item of updates; track item) {

@@ -1,8 +1,34 @@
 <section class="card">
-  <h2>Popular Services</h2>
-  <ul>
-    @for (item of services; track item) {
-      <li>{{ item }}</li>
+  <h2>{{ language.t('popularServices') }}</h2>
+  <p class="service-help">{{ language.t('selectServiceHelp') }}</p>
+  <ul class="service-list">
+    @for (item of services; track item.title.en) {
+      <li>
+        <button class="service-item-btn" type="button" (click)="openService(item)">
+          <span class="service-icon">{{ item.icon }}</span>
+          <span>{{ item.title[language.language()] }}</span>
+        </button>
+      </li>
     }
   </ul>
 </section>
+
+@if (selectedService(); as item) {
+  <div class="service-modal-backdrop" (click)="closeService()"></div>
+  <section
+    #serviceModal
+    class="card service-modal"
+    role="dialog"
+    aria-modal="true"
+    tabindex="0"
+    (keydown.escape)="closeService()"
+    [attr.aria-label]="language.t('serviceModalTitle')"
+  >
+    <h3>{{ item.icon }} {{ item.title[language.language()] }}</h3>
+    <p>{{ item.details[language.language()] }}</p>
+    <div class="service-modal-actions">
+      <button class="btn" type="button" (click)="openContactPage()">{{ language.t('serviceOpenPage') }}</button>
+      <button class="btn ghost" type="button" (click)="closeService()">{{ language.t('close') }}</button>
+    </div>
+  </section>
+}
