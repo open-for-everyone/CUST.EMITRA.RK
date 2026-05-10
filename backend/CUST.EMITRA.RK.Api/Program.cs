@@ -418,7 +418,10 @@ class GoogleAiChatService(IHttpClientFactory httpClientFactory, IConfiguration c
 {
     public async Task<string> GenerateReplyAsync(string userMessage, string userName, CancellationToken cancellationToken)
     {
-        var apiKey = configuration["GoogleAi:ApiKey"];
+        // Accept either the .NET-style config name or the plain env var GEMINI_API_KEY.
+        var apiKey = configuration["GoogleAi:ApiKey"]
+            ?? configuration["GEMINI_API_KEY"]
+            ?? Environment.GetEnvironmentVariable("GEMINI_API_KEY");
         if (string.IsNullOrWhiteSpace(apiKey))
         {
             logger.LogWarning("Google AI key missing. Returning fallback response.");

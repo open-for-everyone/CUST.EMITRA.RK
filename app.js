@@ -1,315 +1,288 @@
-const brandInput = document.getElementById('brandInput');
-const brandTargets = document.querySelectorAll('[data-brand]');
-const newsList = document.getElementById('newsList');
-const year = document.getElementById('year');
-const pwaStatus = document.getElementById('pwaStatus');
-const authStatus = document.getElementById('authStatus');
-const signupForm = document.getElementById('signupForm');
-const loginForm = document.getElementById('loginForm');
-const logoutButton = document.getElementById('logoutButton');
-const chatMessages = document.getElementById('chatMessages');
-const chatForm = document.getElementById('chatForm');
-const chatInput = document.getElementById('chatInput');
-const activityList = document.getElementById('activityList');
+/* global angular */
+(function () {
+  'use strict';
 
-const fallbackUpdates = [
-  'AEPS cash withdrawal window extended to 8:00 PM.',
-  'Aadhaar demographic correction requests now available daily.',
-  'New POP pension enrollment guidance desk active this week.',
-  'Digital receipt download enabled for all utility transactions.',
-  'Secure login and AI chatbot support are now available.'
-];
+  var STORAGE_KEY = 'emitra.auth.token';
+  var FALLBACK_UPDATES = [
+    'AEPS cash withdrawal window extended to 8:00 PM.',
+    'Aadhaar demographic correction requests now available daily.',
+    'New POP pension enrollment guidance desk active this week.',
+    'Digital receipt download enabled for all utility transactions.',
+    'Secure login and AI chatbot support are now available.'
+  ];
 
-const apiBaseUrl = (window.EMITRA_API_BASE_URL || '').trim().replace(/\/$/, '');
-const authStorageKey = 'emitra.auth.token';
+  // ---------------------------------------------------------------------------
+  // Module
+  // ---------------------------------------------------------------------------
+  angular
+    .module('emitraApp', [])
 
-const state = {
-  token: localStorage.getItem(authStorageKey) || '',
-  user: null
-};
+    // -------------------------------------------------------------------------
+    // ApiService – thin $http wrapper that injects the JWT and base URL
+    // -------------------------------------------------------------------------
+    .service('ApiService', ['$http', '$window', function ($http, $window) {
+      var baseUrl = ($window.EMITRA_API_BASE_URL || '').trim().replace(/\/$/, '');
 
-function updateBrand(name) {
-  const value = (name || '').trim() || 'RK';
-  brandTargets.forEach((node) => {
-    node.textContent = value;
-  });
-}
+      function isUnconfigured(url) {
+        if (!url) { return true; }
+        try {
+          var parsed = new $window.URL(url);
+          return parsed.hostname === 'your-render-service.onrender.com';
+        } catch (e) {
+          return true;
+        }
+      }
 
-function renderUpdates(items) {
-  newsList.innerHTML = '';
-  items.forEach((item) => {
-    const li = document.createElement('li');
-    li.textContent = item;
-    newsList.appendChild(li);
-  });
-}
+      function headers() {
+        var token = $window.localStorage.getItem(STORAGE_KEY) || '';
+        var h = { Accept: 'application/json' };
+        if (token) { h.Authorization = 'Bearer ' + token; }
+        return h;
+      }
 
-function renderChatLine(label, text) {
-  const p = document.createElement('p');
-  p.className = 'chat-line';
-  const strong = document.createElement('strong');
-  strong.textContent = `${label}:`;
-  p.appendChild(strong);
-  p.append(` ${text}`);
-  chatMessages.appendChild(p);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-}
+      return {
+        isUnconfigured: function () { return isUnconfigured(baseUrl); },
+        get: function (path) {
+          return $http.get(baseUrl + path, { headers: headers() });
+        },
+        post: function (path, data) {
+          return $http.post(baseUrl + path, data, { headers: headers() });
+        }
+      };
+    }])
 
-function setAuthStatus(message, isOk = false) {
-  authStatus.textContent = message;
-  authStatus.classList.toggle('ok', isOk);
-}
+    // -------------------------------------------------------------------------
+    // Main Controller
+    // -------------------------------------------------------------------------
+    .controller('AppCtrl', ['$scope', '$window', '$timeout', 'ApiService',
+      function ($scope, $window, $timeout, ApiService) {
+        var vm = this;
 
-function setToken(token) {
-  state.token = token;
-  if (token) {
-    localStorage.setItem(authStorageKey, token);
-  } else {
-    localStorage.removeItem(authStorageKey);
-  }
-}
+        // ---- State -----------------------------------------------------------
+        vm.year        = new Date().getFullYear();
+        vm.brandName   = 'RK';
+        vm.darkMode    = $window.localStorage.getItem('emitra.dark') === '1';
+        vm.authTab     = 'login';
+        vm.authLoading = false;
+        vm.user        = null;
+        vm.toasts      = [];
+        vm.updates     = [];
+        vm.updatesLoading = false;
+        vm.chatMessages   = [];
+        vm.chatInput      = '';
+        vm.chatLoading    = false;
+        vm.chatTyping     = false;
+        vm.activities     = [];
+        vm.activityLoading = false;
+        vm.pwaOffline  = false;
 
-function shouldUseFallback(baseUrl) {
-  if (!baseUrl) {
-    return true;
-  }
+        vm.loginData  = { email: '', password: '' };
+        vm.signupData = { name: '', email: '', password: '' };
 
-  try {
-    const parsedUrl = new URL(baseUrl);
-    return parsedUrl.hostname === 'your-render-service.onrender.com';
-  } catch {
-    return true;
-  }
-}
+        vm.heroStats = [
+          { icon: '🛡️', value: 'JWT',    label: 'Secure Auth'    },
+          { icon: '🤖', value: 'Gemini', label: 'AI Chatbot'     },
+          { icon: '⚡', value: 'REST',   label: '.NET 10 API'    },
+          { icon: '📱', value: 'PWA',    label: 'Installable'    }
+        ];
 
-async function apiRequest(path, options = {}) {
-  if (shouldUseFallback(apiBaseUrl)) {
-    throw new Error('Backend API URL not configured.');
-  }
+        vm.services = [
+          { icon: '💳', label: 'Money Withdrawal (AEPS)' },
+          { icon: '🪪', label: 'Aadhaar Update & Authentication' },
+          { icon: '⚡', label: 'Electricity, Water & Mobile Recharge' },
+          { icon: '🧾', label: 'PAN, Insurance & Certificate Support' },
+          { icon: '🏦', label: 'POP Pension Assistance' },
+          { icon: '📄', label: 'Government Form Assistance' }
+        ];
 
-  const headers = {
-    Accept: 'application/json',
-    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-    ...(options.headers || {})
-  };
+        vm.techStack = [
+          { icon: '🅰️', name: 'AngularJS 1.8', desc: 'UI framework via CDN' },
+          { icon: '🔷', name: '.NET 10',       desc: 'Backend API' },
+          { icon: '🔒', name: 'JWT Auth',       desc: 'Secure token auth' },
+          { icon: '🗄️', name: 'SQLite',         desc: 'Lightweight DB' },
+          { icon: '🤖', name: 'Google Gemini',  desc: 'AI chatbot' },
+          { icon: '🐋', name: 'Docker',         desc: 'Render deployment' }
+        ];
 
-  if (state.token) {
-    headers.Authorization = `Bearer ${state.token}`;
-  }
+        // ---- Toast system ---------------------------------------------------
+        var toastId = 0;
+        function toast(message, type) {
+          var icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+          var item = { id: ++toastId, message: message, type: type || 'info', icon: icons[type] || 'ℹ️' };
+          vm.toasts.push(item);
+          $timeout(function () { vm.dismissToast(item); }, 4500);
+        }
 
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    ...options,
-    headers
-  });
+        vm.dismissToast = function (item) {
+          var idx = vm.toasts.indexOf(item);
+          if (idx > -1) { vm.toasts.splice(idx, 1); }
+        };
 
-  if (!response.ok) {
-    let message = `HTTP ${response.status}`;
-    try {
-      const payload = await response.json();
-      message = payload.message || message;
-    } catch {
-      // no-op
-    }
-    throw new Error(message);
-  }
+        // ---- Dark mode ------------------------------------------------------
+        vm.toggleDark = function () {
+          vm.darkMode = !vm.darkMode;
+          $window.localStorage.setItem('emitra.dark', vm.darkMode ? '1' : '0');
+        };
 
-  return response.status === 204 ? null : response.json();
-}
+        // ---- Token helpers --------------------------------------------------
+        function getToken()          { return $window.localStorage.getItem(STORAGE_KEY) || ''; }
+        function setToken(token)     { if (token) { $window.localStorage.setItem(STORAGE_KEY, token); } else { $window.localStorage.removeItem(STORAGE_KEY); } }
 
-async function loadUpdates() {
-  if (shouldUseFallback(apiBaseUrl)) {
-    renderUpdates(fallbackUpdates);
-    return;
-  }
+        // ---- Updates --------------------------------------------------------
+        vm.updatesLoading = true;
+        if (ApiService.isUnconfigured()) {
+          vm.updates = FALLBACK_UPDATES;
+          vm.updatesLoading = false;
+        } else {
+          ApiService.get('/api/updates').then(function (res) {
+            vm.updates = Array.isArray(res.data) && res.data.length ? res.data : FALLBACK_UPDATES;
+          }, function () {
+            vm.updates = FALLBACK_UPDATES;
+          }).finally(function () {
+            vm.updatesLoading = false;
+          });
+        }
 
-  try {
-    const data = await apiRequest('/api/updates');
-    if (Array.isArray(data) && data.length) {
-      renderUpdates(data.map((item) => String(item)));
-      return;
-    }
-  } catch (error) {
-    console.warn('Could not load updates from backend:', error);
-  }
+        // ---- Auth -----------------------------------------------------------
+        function handleAuthResponse(data) {
+          setToken(data.token);
+          return refreshProfile();
+        }
 
-  renderUpdates(fallbackUpdates);
-}
+        function refreshProfile() {
+          var token = getToken();
+          if (!token) {
+            vm.user = null;
+            return;
+          }
+          if (ApiService.isUnconfigured()) {
+            setToken('');
+            vm.user = null;
+            return;
+          }
+          return ApiService.get('/api/auth/me').then(function (res) {
+            vm.user = res.data;
+            loadActivity();
+            loadChatHistory();
+          }, function () {
+            setToken('');
+            vm.user = null;
+            toast('Session expired. Please login again.', 'warning');
+          });
+        }
 
-async function refreshProfile() {
-  if (!state.token) {
-    state.user = null;
-    setAuthStatus('Not logged in.');
-    logoutButton.hidden = true;
-    return;
-  }
+        vm.login = function () {
+          vm.authLoading = true;
+          ApiService.post('/api/auth/login', vm.loginData).then(function (res) {
+            toast('Welcome back, ' + res.data.name + '!', 'success');
+            vm.loginData = { email: '', password: '' };
+            return handleAuthResponse(res.data);
+          }, function (err) {
+            var msg = (err.data && err.data.message) ? err.data.message : 'Login failed.';
+            toast(msg, 'error');
+          }).finally(function () {
+            vm.authLoading = false;
+          });
+        };
 
-  try {
-    const profile = await apiRequest('/api/auth/me');
-    state.user = profile;
-    setAuthStatus(`Logged in as ${profile.name}`, true);
-    logoutButton.hidden = false;
-    await Promise.all([loadActivity(), loadChatHistory()]);
-  } catch (error) {
-    console.warn('Profile refresh failed:', error);
-    setToken('');
-    state.user = null;
-    setAuthStatus('Session expired. Please login again.');
-    logoutButton.hidden = true;
-  }
-}
+        vm.signup = function () {
+          vm.authLoading = true;
+          ApiService.post('/api/auth/signup', vm.signupData).then(function (res) {
+            toast('Account created! Welcome, ' + res.data.name + '!', 'success');
+            vm.signupData = { name: '', email: '', password: '' };
+            return handleAuthResponse(res.data);
+          }, function (err) {
+            var msg = (err.data && err.data.message) ? err.data.message : 'Signup failed.';
+            toast(msg, 'error');
+          }).finally(function () {
+            vm.authLoading = false;
+          });
+        };
 
-async function loadActivity() {
-  activityList.innerHTML = '';
+        vm.logout = function () {
+          setToken('');
+          vm.user = null;
+          vm.chatMessages = [];
+          vm.activities = [];
+          toast('Logged out successfully.', 'info');
+        };
 
-  if (!state.token) {
-    const li = document.createElement('li');
-    li.textContent = 'Login to view your activity logs.';
-    activityList.appendChild(li);
-    return;
-  }
+        // ---- Chat -----------------------------------------------------------
+        function scrollChatToBottom() {
+          $timeout(function () {
+            var box = $window.document.getElementById('chatBox');
+            if (box) { box.scrollTop = box.scrollHeight; }
+          }, 50);
+        }
 
-  try {
-    const items = await apiRequest('/api/activity');
-    if (!Array.isArray(items) || !items.length) {
-      const li = document.createElement('li');
-      li.textContent = 'No activity yet.';
-      activityList.appendChild(li);
-      return;
-    }
+        function loadChatHistory() {
+          if (!getToken() || ApiService.isUnconfigured()) { return; }
+          ApiService.get('/api/chat/history').then(function (res) {
+            var items = Array.isArray(res.data) ? res.data.slice().reverse() : [];
+            vm.chatMessages = [];
+            items.forEach(function (item) {
+              vm.chatMessages.push({ role: 'user', text: item.message, time: new Date(item.createdAtUtc) });
+              vm.chatMessages.push({ role: 'bot',  text: item.reply,   time: new Date(item.createdAtUtc) });
+            });
+            scrollChatToBottom();
+          }, function () {
+            // silent — non-critical
+          });
+        }
 
-    items.forEach((item) => {
-      const li = document.createElement('li');
-      const time = new Date(item.createdAtUtc).toLocaleString();
-      li.textContent = `${item.action.toUpperCase()} • ${item.metadata || '-'} • ${time}`;
-      activityList.appendChild(li);
-    });
-  } catch (error) {
-    const li = document.createElement('li');
-    li.textContent = `Could not load activity: ${error.message}`;
-    activityList.appendChild(li);
-  }
-}
+        vm.sendChat = function () {
+          var msg = (vm.chatInput || '').trim();
+          if (!msg || vm.chatLoading) { return; }
 
-async function loadChatHistory() {
-  chatMessages.innerHTML = '';
+          vm.chatMessages.push({ role: 'user', text: msg, time: new Date() });
+          vm.chatInput = '';
+          vm.chatTyping = true;
+          vm.chatLoading = true;
+          scrollChatToBottom();
 
-  if (!state.token) {
-    renderChatLine('System', 'Please login to use the chatbot.');
-    return;
-  }
+          ApiService.post('/api/chat', { message: msg }).then(function (res) {
+            vm.chatTyping = false;
+            vm.chatMessages.push({ role: 'bot', text: res.data.reply, time: new Date() });
+            scrollChatToBottom();
+            loadActivity();
+          }, function (err) {
+            vm.chatTyping = false;
+            var errMsg = (err.data && err.data.message) ? err.data.message : 'Chat failed. Please try again.';
+            vm.chatMessages.push({ role: 'bot', text: errMsg, time: new Date() });
+            toast(errMsg, 'error');
+            scrollChatToBottom();
+          }).finally(function () {
+            vm.chatLoading = false;
+          });
+        };
 
-  try {
-    const history = await apiRequest('/api/chat/history');
-    const items = Array.isArray(history) ? [...history].reverse() : [];
-    if (!items.length) {
-      renderChatLine('System', 'Start a conversation with the assistant.');
-      return;
-    }
+        // ---- Activity -------------------------------------------------------
+        function loadActivity() {
+          if (!getToken() || ApiService.isUnconfigured()) { return; }
+          vm.activityLoading = true;
+          ApiService.get('/api/activity').then(function (res) {
+            vm.activities = Array.isArray(res.data) ? res.data : [];
+          }, function () {
+            toast('Could not load activity.', 'warning');
+          }).finally(function () {
+            vm.activityLoading = false;
+          });
+        }
 
-    items.forEach((item) => {
-      renderChatLine('You', item.message);
-      renderChatLine('Assistant', item.reply);
-    });
-  } catch (error) {
-    renderChatLine('System', `Could not load chat history: ${error.message}`);
-  }
-}
+        vm.refreshActivity = function () { loadActivity(); };
 
-signupForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const payload = {
-    name: document.getElementById('signupName').value,
-    email: document.getElementById('signupEmail').value,
-    password: document.getElementById('signupPassword').value
-  };
+        // ---- Service Worker (PWA) -------------------------------------------
+        if ('serviceWorker' in $window.navigator) {
+          $window.addEventListener('load', function () {
+            $window.navigator.serviceWorker.register('/service-worker.js').catch(function () {
+              $scope.$apply(function () { vm.pwaOffline = true; });
+            });
+          });
+        }
 
-  try {
-    const result = await apiRequest('/api/auth/signup', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    setToken(result.token);
-    setAuthStatus(`Welcome ${result.name}! Account created.`, true);
-    await refreshProfile();
-    signupForm.reset();
-  } catch (error) {
-    setAuthStatus(`Signup failed: ${error.message}`);
-  }
-});
+        // ---- Init -----------------------------------------------------------
+        refreshProfile();
+      }
+    ]);
 
-loginForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const payload = {
-    email: document.getElementById('loginEmail').value,
-    password: document.getElementById('loginPassword').value
-  };
-
-  try {
-    const result = await apiRequest('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    setToken(result.token);
-    setAuthStatus(`Welcome back ${result.name}!`, true);
-    await refreshProfile();
-    loginForm.reset();
-  } catch (error) {
-    setAuthStatus(`Login failed: ${error.message}`);
-  }
-});
-
-logoutButton.addEventListener('click', async () => {
-  setToken('');
-  state.user = null;
-  setAuthStatus('Logged out.');
-  logoutButton.hidden = true;
-  await Promise.all([loadActivity(), loadChatHistory()]);
-});
-
-chatForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-
-  if (!state.token) {
-    renderChatLine('System', 'Please login first.');
-    return;
-  }
-
-  const message = chatInput.value.trim();
-  if (!message) {
-    return;
-  }
-
-  renderChatLine('You', message);
-  chatInput.value = '';
-
-  try {
-    const result = await apiRequest('/api/chat', {
-      method: 'POST',
-      body: JSON.stringify({ message })
-    });
-    renderChatLine('Assistant', result.reply);
-    await loadActivity();
-  } catch (error) {
-    renderChatLine('System', `Chat failed: ${error.message}`);
-  }
-});
-
-year.textContent = new Date().getFullYear();
-updateBrand(brandInput.value);
-loadUpdates();
-loadActivity();
-refreshProfile();
-
-brandInput.addEventListener('input', (event) => {
-  updateBrand(event.target.value);
-});
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js').catch((error) => {
-      console.warn('Service worker registration failed:', error);
-      pwaStatus.hidden = false;
-      pwaStatus.textContent = 'Offline install features are currently unavailable on this device/browser.';
-    });
-  });
-}
+}());
