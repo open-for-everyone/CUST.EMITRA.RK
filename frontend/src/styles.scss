@@ -428,8 +428,8 @@ textarea {
 }
 
 .service-item-btn:hover {
-  border-color: #c7d2fe;
-  background: #eef2ff;
+  border-color: var(--accent);
+  background: var(--bg);
 }
 
 .service-icon {

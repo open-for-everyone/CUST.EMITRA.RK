@@ -86,9 +86,6 @@ export class ServicesComponent {
   }
 
   openContactPage(): void {
-    const opened = window.open('/contact', '_blank', 'noopener,noreferrer');
-    if (!opened) {
-      this.router.navigateByUrl('/contact');
-    }
+    this.router.navigateByUrl('/contact');
   }
 }

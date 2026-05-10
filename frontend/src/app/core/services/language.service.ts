@@ -111,6 +111,7 @@ export class LanguageService {
       return stored;
     }
 
-    return navigator.language.toLowerCase().startsWith('hi') ? 'hi' : 'en';
+    const browserLanguage = navigator.language.split('-')[0]?.toLowerCase();
+    return browserLanguage === 'hi' ? 'hi' : 'en';
   }
 }
