@@ -2,6 +2,7 @@ const brandInput = document.getElementById('brandInput');
 const brandTargets = document.querySelectorAll('[data-brand]');
 const newsList = document.getElementById('newsList');
 const year = document.getElementById('year');
+const pwaStatus = document.getElementById('pwaStatus');
 
 const updates = [
   'AEPS cash withdrawal window extended to 8:00 PM.',
@@ -34,6 +35,8 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js').catch((error) => {
       console.warn('Service worker registration failed:', error);
+      pwaStatus.hidden = false;
+      pwaStatus.textContent = 'Offline install features are currently unavailable on this device/browser.';
     });
   });
 }

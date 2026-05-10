@@ -47,6 +47,12 @@ h1 {
   max-width: 760px;
 }
 
+.status {
+  margin-top: 8px;
+  color: #b91c1c;
+  font-size: 0.95rem;
+}
+
 .brand-row {
   display: flex;
   align-items: center;
