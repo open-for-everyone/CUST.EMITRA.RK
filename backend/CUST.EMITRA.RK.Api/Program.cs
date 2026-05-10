@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,6 +20,8 @@ const string ExternalCookieScheme = "ExternalCookie";
 const string GoogleSocialProvider = "google";
 const string FacebookSocialProvider = "facebook";
 const string LinkedInSocialProvider = "linkedin";
+const string CorrelationIdHeader = "X-Correlation-ID";
+const string UpdatesCacheKey = "api:updates:v1";
 
 builder.Services.AddOpenApi();
 builder.Services.AddCors(options =>
@@ -32,6 +35,7 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddHttpClient();
+builder.Services.AddMemoryCache();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "Data Source=emitra.db";
@@ -179,6 +183,24 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowFrontend");
+app.Use(async (context, next) =>
+{
+    var correlationId = context.Request.Headers[CorrelationIdHeader].FirstOrDefault();
+    if (string.IsNullOrWhiteSpace(correlationId))
+    {
+        correlationId = Guid.NewGuid().ToString("N");
+    }
+
+    context.Response.Headers[CorrelationIdHeader] = correlationId;
+
+    using (app.Logger.BeginScope(new Dictionary<string, object?>
+    {
+        ["CorrelationId"] = correlationId
+    }))
+    {
+        await next();
+    }
+});
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseHttpsRedirection();
@@ -198,7 +220,17 @@ var socialSchemeLookup = socialProviders
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok", platform = ".NET 10", auth = "jwt-social", chatbot = "google-ai-ready" }))
    .WithName("Health");
 
-app.MapGet("/api/updates", () => Results.Ok(updates))
+app.MapGet("/api/updates", (IMemoryCache cache) =>
+{
+    var payload = cache.GetOrCreate(UpdatesCacheKey, entry =>
+    {
+        entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2);
+        entry.SlidingExpiration = TimeSpan.FromMinutes(1);
+        return updates;
+    });
+
+    return Results.Ok(payload);
+})
    .WithName("GetUpdates");
 
 app.MapGet("/api/auth/social/providers", () =>
@@ -323,24 +355,24 @@ app.MapPost("/api/auth/signup", async (
 
     if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
     {
-        return Results.BadRequest(new { message = "Name, email, and password are required." });
+        return ApiResponses.Validation("Name, email, and password are required.");
     }
 
     var normalizedEmail = request.Email.Trim().ToLowerInvariant();
     if (!new EmailAddressAttribute().IsValid(normalizedEmail))
     {
-        return Results.BadRequest(new { message = "Please provide a valid email address." });
+        return ApiResponses.Validation("Please provide a valid email address.");
     }
 
     if (request.Password.Length < 6)
     {
-        return Results.BadRequest(new { message = "Password must be at least 6 characters long." });
+        return ApiResponses.Validation("Password must be at least 6 characters long.");
     }
 
     var existing = await db.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail, cancellationToken);
     if (existing is not null)
     {
-        return Results.Conflict(new { message = "Email is already registered." });
+        return ApiResponses.Conflict("Email is already registered.");
     }
 
     var user = new AppUser
@@ -384,7 +416,7 @@ app.MapPost("/api/auth/login", async (
     if (user is null || !PasswordHasher.Verify(request.Password ?? string.Empty, user.PasswordHash))
     {
         logger.LogWarning("Failed login attempt from IP {IpAddress}", httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
-        return Results.Unauthorized();
+        return ApiResponses.Unauthorized("Authentication is required.");
     }
 
     db.ActivityLogs.Add(new ActivityLog
@@ -406,12 +438,12 @@ app.MapGet("/api/auth/me", [Authorize] async (ClaimsPrincipal principal, AppDbCo
     var userId = principal.GetUserId();
     if (userId is null)
     {
-        return Results.Unauthorized();
+        return ApiResponses.Unauthorized("User profile not found.");
     }
 
     var user = await db.Users.FindAsync([userId.Value], cancellationToken);
     return user is null
-        ? Results.Unauthorized()
+        ? ApiResponses.Unauthorized("User profile not found.")
         : Results.Ok(new UserProfileResponse(user.Name, user.Email, user.CreatedAtUtc));
 });
 
@@ -428,19 +460,19 @@ app.MapPost("/api/chat", [Authorize] async (
 
     if (string.IsNullOrWhiteSpace(request.Message))
     {
-        return Results.BadRequest(new { message = "Message is required." });
+        return ApiResponses.Validation("Message is required.");
     }
 
     var userId = principal.GetUserId();
     if (userId is null)
     {
-        return Results.Unauthorized();
+        return ApiResponses.Unauthorized("Authentication is required to chat.");
     }
 
     var user = await db.Users.FindAsync([userId.Value], cancellationToken);
     if (user is null)
     {
-        return Results.Unauthorized();
+        return ApiResponses.Unauthorized("User profile not found.");
     }
 
     var responseText = await chatService.GenerateReplyAsync(request.Message.Trim(), user.Name, cancellationToken);
@@ -470,359 +502,101 @@ app.MapPost("/api/chat", [Authorize] async (
 app.MapGet("/api/chat/history", [Authorize] async (
     ClaimsPrincipal principal,
     AppDbContext db,
+    int page = 1,
+    int pageSize = 20,
     CancellationToken cancellationToken) =>
 {
     var userId = principal.GetUserId();
     if (userId is null)
     {
-        return Results.Unauthorized();
+        return ApiResponses.Unauthorized("Authentication is required to access chat history.");
+    }
+
+    var normalizedPage = page <= 0 ? 1 : page;
+    var normalizedPageSize = pageSize switch
+    {
+        <= 0 => 20,
+        > 50 => 50,
+        _ => pageSize
+    };
+
+    var totalCount = await db.ChatMessages
+        .Where(chat => chat.UserId == userId)
+        .CountAsync(cancellationToken);
+
+    var totalPages = totalCount == 0
+        ? 0
+        : (int)Math.Ceiling(totalCount / (double)normalizedPageSize);
+
+    if (totalPages > 0 && normalizedPage > totalPages)
+    {
+        normalizedPage = totalPages;
     }
 
     var history = await db.ChatMessages
         .Where(chat => chat.UserId == userId)
         .OrderByDescending(chat => chat.CreatedAtUtc)
-        .Take(20)
+        .Skip((normalizedPage - 1) * normalizedPageSize)
+        .Take(normalizedPageSize)
         .Select(chat => new ChatHistoryItem(chat.UserMessage, chat.BotResponse, chat.CreatedAtUtc))
         .ToListAsync(cancellationToken);
 
-    return Results.Ok(history);
+    return Results.Ok(new PagedResponse<ChatHistoryItem>(
+        history,
+        normalizedPage,
+        normalizedPageSize,
+        totalCount,
+        totalPages));
 });
 
 app.MapGet("/api/activity", [Authorize] async (
     ClaimsPrincipal principal,
     AppDbContext db,
+    int page = 1,
+    int pageSize = 30,
     CancellationToken cancellationToken) =>
 {
     var userId = principal.GetUserId();
     if (userId is null)
     {
-        return Results.Unauthorized();
+        return ApiResponses.Unauthorized("Authentication is required to access activity.");
+    }
+
+    var normalizedPage = page <= 0 ? 1 : page;
+    var normalizedPageSize = pageSize switch
+    {
+        <= 0 => 30,
+        > 100 => 100,
+        _ => pageSize
+    };
+
+    var totalCount = await db.ActivityLogs
+        .Where(a => a.UserId == userId)
+        .CountAsync(cancellationToken);
+
+    var totalPages = totalCount == 0
+        ? 0
+        : (int)Math.Ceiling(totalCount / (double)normalizedPageSize);
+
+    if (totalPages > 0 && normalizedPage > totalPages)
+    {
+        normalizedPage = totalPages;
     }
 
     var activities = await db.ActivityLogs
         .Where(a => a.UserId == userId)
         .OrderByDescending(a => a.CreatedAtUtc)
-        .Take(30)
+        .Skip((normalizedPage - 1) * normalizedPageSize)
+        .Take(normalizedPageSize)
         .Select(a => new ActivityItem(a.Action, a.Metadata, a.CreatedAtUtc))
         .ToListAsync(cancellationToken);
 
-    return Results.Ok(activities);
+    return Results.Ok(new PagedResponse<ActivityItem>(
+        activities,
+        normalizedPage,
+        normalizedPageSize,
+        totalCount,
+        totalPages));
 });
 
 app.Run();
-
-record SignupRequest(string Name, string Email, string Password);
-record LoginRequest(string Email, string Password);
-record ChatRequest(string Message);
-record AuthResponse(string Token, string Name, string Email);
-record UserProfileResponse(string Name, string Email, DateTime CreatedAtUtc);
-record ChatResponse(string Reply, DateTime CreatedAtUtc);
-record ChatHistoryItem(string Message, string Reply, DateTime CreatedAtUtc);
-record ActivityItem(string Action, string? Metadata, DateTime CreatedAtUtc);
-record SocialProviderResponse(string Key, string DisplayName);
-record SocialProviderConfig(string Key, string DisplayName, string Scheme);
-
-class AppUser
-{
-    public int Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
-    public string PasswordHash { get; set; } = string.Empty;
-    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
-}
-
-class ChatMessage
-{
-    public int Id { get; set; }
-    public int UserId { get; set; }
-    public AppUser? User { get; set; }
-    public string UserMessage { get; set; } = string.Empty;
-    public string BotResponse { get; set; } = string.Empty;
-    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
-}
-
-class ActivityLog
-{
-    public int Id { get; set; }
-    public int? UserId { get; set; }
-    public AppUser? User { get; set; }
-    public string Action { get; set; } = string.Empty;
-    public string? Metadata { get; set; }
-    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
-}
-
-class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
-{
-    public DbSet<AppUser> Users => Set<AppUser>();
-    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
-    public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<AppUser>()
-            .HasIndex(u => u.Email)
-            .IsUnique();
-
-        modelBuilder.Entity<ChatMessage>()
-            .HasOne(c => c.User)
-            .WithMany()
-            .HasForeignKey(c => c.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        modelBuilder.Entity<ActivityLog>()
-            .HasOne(c => c.User)
-            .WithMany()
-            .HasForeignKey(c => c.UserId)
-            .OnDelete(DeleteBehavior.SetNull);
-    }
-}
-
-static class PasswordHasher
-{
-    public static string Hash(string password)
-    {
-        var salt = RandomNumberGenerator.GetBytes(16);
-        const int iterations = 600_000;
-        var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, 32);
-        return $"{iterations}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
-    }
-
-    public static bool Verify(string password, string storedHash)
-    {
-        var parts = storedHash.Split('.', 3);
-        if (parts.Length != 3 || !int.TryParse(parts[0], out var iterations))
-        {
-            return false;
-        }
-
-        var salt = Convert.FromBase64String(parts[1]);
-        var expectedHash = Convert.FromBase64String(parts[2]);
-        var actualHash = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, expectedHash.Length);
-
-        return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
-    }
-}
-
-static class JwtTokenFactory
-{
-    public static string Create(AppUser user, string issuer, string audience, SecurityKey key)
-    {
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var tokenDescriptor = new SecurityTokenDescriptor
-        {
-            Subject = new ClaimsIdentity([
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.Name),
-                new Claim(ClaimTypes.Email, user.Email)
-            ]),
-            Expires = DateTime.UtcNow.AddHours(12),
-            Issuer = issuer,
-            Audience = audience,
-            SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature)
-        };
-
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-        return tokenHandler.WriteToken(token);
-    }
-}
-
-static class ClaimsPrincipalExtensions
-{
-    public static int? GetUserId(this ClaimsPrincipal principal)
-    {
-        var raw = principal.FindFirstValue(ClaimTypes.NameIdentifier);
-        return int.TryParse(raw, out var userId) ? userId : null;
-    }
-}
-
-static class SocialReturnUrlResolver
-{
-    public static string Resolve(string? rawReturnUrl, string defaultReturnUrl)
-    {
-        if (string.IsNullOrWhiteSpace(rawReturnUrl))
-        {
-            return defaultReturnUrl;
-        }
-
-        if (!Uri.TryCreate(rawReturnUrl, UriKind.Absolute, out var returnUri) ||
-            !Uri.TryCreate(defaultReturnUrl, UriKind.Absolute, out var allowedBaseUri))
-        {
-            return defaultReturnUrl;
-        }
-
-        var isHttps = string.Equals(returnUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
-        var isLocalhost = string.Equals(returnUri.Host, "localhost", StringComparison.OrdinalIgnoreCase);
-        if (!isHttps && !isLocalhost)
-        {
-            return defaultReturnUrl;
-        }
-
-        var allowedHostMatches = string.Equals(returnUri.Host, allowedBaseUri.Host, StringComparison.OrdinalIgnoreCase);
-        var localhostMatches = isLocalhost;
-        if (!allowedHostMatches && !localhostMatches)
-        {
-            return defaultReturnUrl;
-        }
-
-        return rawReturnUrl;
-    }
-
-    public static string GetDefaultDisplayName(string email)
-    {
-        if (!email.Contains('@', StringComparison.Ordinal))
-        {
-            return "User";
-        }
-
-        var candidate = email.Split('@', 2, StringSplitOptions.TrimEntries)[0];
-        return string.IsNullOrWhiteSpace(candidate) ? "User" : candidate;
-    }
-}
-
-class GoogleAiChatService(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<GoogleAiChatService> logger)
-{
-    public async Task<string> GenerateReplyAsync(string userMessage, string userName, CancellationToken cancellationToken)
-    {
-        // Accept either the .NET-style config name or the plain env var GEMINI_API_KEY.
-        var apiKey = configuration["GoogleAi:ApiKey"]
-            ?? configuration["GEMINI_API_KEY"]
-            ?? Environment.GetEnvironmentVariable("GEMINI_API_KEY");
-        if (string.IsNullOrWhiteSpace(apiKey))
-        {
-            logger.LogWarning("Google AI key missing. Returning fallback response.");
-            return BuildFallbackResponse(userMessage, userName);
-        }
-
-        try
-        {
-            var client = httpClientFactory.CreateClient();
-            var endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
-            var safeUserName = SanitizeForPrompt(userName, 80);
-            var safeUserMessage = SanitizeForPrompt(userMessage, 500);
-
-            var payload = new
-            {
-                contents = new[]
-                {
-                    new
-                    {
-                        parts = new[]
-                        {
-                            new
-                            {
-                                text = $@"You are a helpful assistant for RK Online Centre, an eMitra service centre in Jaipur, Rajasthan.
-User name: {safeUserName}.
-
-Services offered by RK Online Centre:
-1. Money Withdrawal (AEPS) – Aadhaar-enabled cash withdrawal and mini statement.
-2. Aadhaar Update & Authentication – Aadhaar correction, verification, and biometric assistance.
-3. Electricity, Water & Mobile Recharge – Utility bill payments and mobile recharges.
-4. PAN, Insurance & Certificates – PAN services, insurance enrollment, certificate applications.
-5. Pension & Social Scheme Support – Enrollment and status tracking for pension and welfare schemes.
-6. Passport & eDistrict Services – Online appointments and document support for citizen services.
-7. Government Form Assistance – Help with online forms, uploads, and submission verification.
-
-Answer only questions related to these services or general citizen service guidance. Keep responses clear and concise.
-If the issue cannot be resolved through this chat, end your response with: 'If your issue isn't resolved, please connect with us on WhatsApp: https://wa.me/911415550101'
-
-User message: {safeUserMessage}"
-                            }
-                        }
-                    }
-                }
-            };
-
-            using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
-            {
-                Content = JsonContent.Create(payload)
-            };
-            request.Headers.Add("X-Goog-Api-Key", apiKey);
-
-            using var response = await client.SendAsync(request, cancellationToken);
-            if (!response.IsSuccessStatusCode)
-            {
-                logger.LogWarning("Google AI request failed with status code {StatusCode}", response.StatusCode);
-                return BuildFallbackResponse(userMessage, userName);
-            }
-
-            var jsonText = await response.Content.ReadAsStringAsync(cancellationToken);
-            using var json = JsonDocument.Parse(jsonText);
-
-            if (json.RootElement.TryGetProperty("candidates", out var candidates) &&
-                candidates.ValueKind == JsonValueKind.Array &&
-                candidates.GetArrayLength() > 0)
-            {
-                var first = candidates[0];
-                if (first.TryGetProperty("content", out var content) &&
-                    content.TryGetProperty("parts", out var parts) &&
-                    parts.ValueKind == JsonValueKind.Array &&
-                    parts.GetArrayLength() > 0)
-                {
-                    var text = parts[0].GetProperty("text").GetString();
-                    if (!string.IsNullOrWhiteSpace(text))
-                    {
-                        return text.Trim();
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Google AI request failed unexpectedly");
-        }
-
-        return BuildFallbackResponse(userMessage, userName);
-    }
-
-    private static string BuildFallbackResponse(string message, string userName)
-    {
-        return $"Hi {userName}, thanks for your message. We received: '{message}'. Our AI assistant is temporarily limited, but the backend team has been notified and will help shortly.\n\nIf your issue isn't resolved, please connect with us on WhatsApp: https://wa.me/911415550101";
-    }
-
-    private static string SanitizeForPrompt(string input, int maxLength)
-    {
-        if (string.IsNullOrWhiteSpace(input))
-        {
-            return "N/A";
-        }
-
-        var normalized = input.Replace("\r", " ").Replace("\n", " ").Replace("\t", " ").Trim();
-        return normalized.Length > maxLength ? normalized[..maxLength] : normalized;
-    }
-}
-
-class BackendTeamNotifier(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<BackendTeamNotifier> logger)
-{
-    public async Task NotifyAsync(string action, int userId, string details, CancellationToken cancellationToken)
-    {
-        logger.LogInformation("User activity detected. Action: {Action}, UserId: {UserId}", action, userId);
-
-        var webhookUrl = configuration["BackendTeam:WebhookUrl"];
-        if (string.IsNullOrWhiteSpace(webhookUrl))
-        {
-            return;
-        }
-
-        try
-        {
-            var client = httpClientFactory.CreateClient();
-            var payload = new
-            {
-                action,
-                userId,
-                details,
-                timestampUtc = DateTime.UtcNow
-            };
-
-            using var response = await client.PostAsJsonAsync(webhookUrl, payload, cancellationToken);
-            if (!response.IsSuccessStatusCode)
-            {
-                logger.LogWarning("Backend team webhook failed with status code {StatusCode}", response.StatusCode);
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Backend team notification failed");
-        }
-    }
-}
