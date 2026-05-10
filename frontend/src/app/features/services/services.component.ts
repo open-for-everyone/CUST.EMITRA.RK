@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { LanguageService } from '../../core/services/language.service';
 
@@ -16,6 +16,7 @@ interface ServiceItem {
 export class ServicesComponent {
   readonly language = inject(LanguageService);
   private readonly router = inject(Router);
+  private readonly modalRef = viewChild<ElementRef<HTMLElement>>('serviceModal');
   readonly selectedService = signal<ServiceItem | null>(null);
 
   readonly services: ServiceItem[] = [
@@ -79,6 +80,7 @@ export class ServicesComponent {
 
   openService(service: ServiceItem): void {
     this.selectedService.set(service);
+    setTimeout(() => this.modalRef()?.nativeElement.focus(), 0);
   }
 
   closeService(): void {

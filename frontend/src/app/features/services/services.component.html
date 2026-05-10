@@ -16,6 +16,7 @@
 @if (selectedService(); as item) {
   <div class="service-modal-backdrop" (click)="closeService()"></div>
   <section
+    #serviceModal
     class="card service-modal"
     role="dialog"
     aria-modal="true"
@@ -26,7 +27,7 @@
     <h3>{{ item.icon }} {{ item.title[language.language()] }}</h3>
     <p>{{ item.details[language.language()] }}</p>
     <div class="service-modal-actions">
-      <button class="btn" type="button" autofocus (click)="openContactPage()">{{ language.t('serviceOpenPage') }}</button>
+      <button class="btn" type="button" (click)="openContactPage()">{{ language.t('serviceOpenPage') }}</button>
       <button class="btn ghost" type="button" (click)="closeService()">{{ language.t('close') }}</button>
     </div>
   </section>
