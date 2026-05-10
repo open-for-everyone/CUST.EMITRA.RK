@@ -87,7 +87,7 @@ backend/CUST.EMITRA.RK.Api/
 |---|---|---|
 | `Jwt__Issuer` | JWT issuer claim | `CUST.EMITRA.RK.Api` |
 | `Jwt__Audience` | JWT audience claim | `CUST.EMITRA.RK.Client` |
-| `ConnectionStrings__DefaultConnection` | SQLite connection string | `Data Source=emitra.db` |
+| `ConnectionStrings__DefaultConnection` | Database connection string (SQLite or MongoDB URI) | `Data Source=emitra.db` |
 | `GoogleAi__ApiKey` | Alternative name for Gemini API key | *(same as `GEMINI_API_KEY`)* |
 | `BackendTeam__WebhookUrl` | Webhook URL for activity notifications | *(none)* |
 | `Authentication__Google__ClientId` | Google OAuth client id for social login | *(none)* |
@@ -98,7 +98,7 @@ backend/CUST.EMITRA.RK.Api/
 | `Authentication__LinkedIn__ClientSecret` | LinkedIn client secret for social login | *(none)* |
 | `PORT` | Port the API listens on (set automatically by Render) | `10000` |
 
-> **Note on `MONGODB_CONNECTION_STRING`:** The backend currently uses **SQLite**, not MongoDB. The `MONGODB_CONNECTION_STRING` variable is not read by the application. If you want MongoDB support, the data layer would need to be updated.
+> **MongoDB support:** Set `ConnectionStrings__DefaultConnection` to a MongoDB URI (for example `mongodb+srv://.../emitra`) to persist data in MongoDB. If the value is not a MongoDB URI, the backend uses SQLite.
 
 ### .NET-style double-underscore convention
 

@@ -22,6 +22,7 @@ const string FacebookSocialProvider = "facebook";
 const string LinkedInSocialProvider = "linkedin";
 const string CorrelationIdHeader = "X-Correlation-ID";
 const string UpdatesCacheKey = "api:updates:v1";
+const string DefaultMongoDatabaseName = "emitra";
 
 builder.Services.AddOpenApi();
 builder.Services.AddCors(options =>
@@ -39,7 +40,18 @@ builder.Services.AddMemoryCache();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "Data Source=emitra.db";
-builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite(connectionString));
+var mongoDatabaseName = TryResolveMongoDatabaseName(connectionString);
+builder.Services.AddDbContext<AppDbContext>(options =>
+{
+    if (mongoDatabaseName is not null)
+    {
+        options.UseMongoDB(connectionString, mongoDatabaseName);
+    }
+    else
+    {
+        options.UseSqlite(connectionString);
+    }
+});
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "CUST.EMITRA.RK.Api";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "CUST.EMITRA.RK.Client";
@@ -174,7 +186,11 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated();
+    // MongoDB does not require relational schema creation like SQLite.
+    if (db.Database.IsSqlite())
+    {
+        db.Database.EnsureCreated();
+    }
 }
 
 if (app.Environment.IsDevelopment())
@@ -596,3 +612,37 @@ app.MapGet("/api/activity", [Authorize] async (
 });
 
 app.Run();
+
+static string? TryResolveMongoDatabaseName(string connectionString)
+{
+    if (!connectionString.StartsWith("mongodb://", StringComparison.OrdinalIgnoreCase) &&
+        !connectionString.StartsWith("mongodb+srv://", StringComparison.OrdinalIgnoreCase))
+    {
+        return null;
+    }
+
+    if (!Uri.TryCreate(connectionString, UriKind.Absolute, out var uri))
+    {
+        return DefaultMongoDatabaseName;
+    }
+
+    var dbName = uri.AbsolutePath
+        .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .FirstOrDefault();
+    if (!IsValidMongoDatabaseName(dbName))
+    {
+        return DefaultMongoDatabaseName;
+    }
+
+    return dbName;
+}
+
+static bool IsValidMongoDatabaseName(string? dbName)
+{
+    if (string.IsNullOrWhiteSpace(dbName) || dbName.Length > 63)
+    {
+        return false;
+    }
+
+    return dbName.IndexOfAny([' ', '/', '\\', '.', '"', '$', '*', '<', '>', ':', '|', '?', '\0']) < 0;
+}
