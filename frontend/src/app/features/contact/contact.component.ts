@@ -152,7 +152,7 @@ import { SocialProvider } from '../../core/models/api.models';
   `
 })
 export class ContactComponent implements OnInit {
-  private readonly GEOLOCATION_TIMEOUT_MS = 10000;
+  private readonly GEOLOCATION_TIMEOUT_MILLISECONDS = 10000;
   readonly auth = inject(AuthService);
   readonly providers = signal<SocialProvider[]>([]);
   readonly providersLoading = signal(false);
@@ -252,7 +252,7 @@ export class ContactComponent implements OnInit {
       () => {
         this.locationError.set('Unable to access your current location. Please allow location permissions.');
       },
-      { enableHighAccuracy: true, timeout: this.GEOLOCATION_TIMEOUT_MS }
+      { enableHighAccuracy: true, timeout: this.GEOLOCATION_TIMEOUT_MILLISECONDS }
     );
   }
 
@@ -268,8 +268,12 @@ export class ContactComponent implements OnInit {
 
   getDirectEmailLink(): string {
     const subject = encodeURIComponent('Support request - RK eMitra Online Centre');
-    const body = encodeURIComponent(`Name: ${this.name}\nEmail: ${this.email}\nLocation: ${this.locationLabel()}\n\nMessage:\n${this.message}`);
+    const body = encodeURIComponent(this.buildEmailBody());
     return `mailto:support@rkemitra.in?subject=${subject}&body=${body}`;
+  }
+
+  private buildEmailBody(): string {
+    return `Name: ${this.name}\nEmail: ${this.email}\nLocation: ${this.locationLabel()}\n\nMessage:\n${this.message}`;
   }
 
   private loadProviders(): void {
