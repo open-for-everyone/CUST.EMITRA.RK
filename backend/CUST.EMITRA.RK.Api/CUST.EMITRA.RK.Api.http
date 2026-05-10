@@ -1,0 +1,6 @@
+@CUST.EMITRA.RK.Api_HostAddress = http://localhost:5098
+
+GET {{CUST.EMITRA.RK.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
