@@ -17,7 +17,12 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((res) => {
       if (res) return res;
-      return fetch(event.request).catch(() => new Response('Unable to load requested content while offline. Please try again later.', { status: 503, headers: { 'Content-Type': 'text/plain' } }));
+      return fetch(event.request).catch(() =>
+        new Response('Unable to load requested content while offline. Please try again later.', {
+          status: 503,
+          headers: { 'Content-Type': 'text/plain' }
+        })
+      );
     })
   );
 });
