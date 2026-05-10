@@ -37,15 +37,15 @@ import { SocialProvider } from '../../../core/models/api.models';
 
           @if (mode === 'login') {
             <form (ngSubmit)="submitLogin()" class="form">
-              <input [(ngModel)]="loginEmail" name="loginEmail" type="email" required placeholder="Email" />
-              <input [(ngModel)]="loginPassword" name="loginPassword" type="password" required placeholder="Password" />
+              <input [(ngModel)]="loginEmail" name="loginEmail" type="email" autocomplete="email" required placeholder="Email" />
+              <input [(ngModel)]="loginPassword" name="loginPassword" type="password" autocomplete="current-password" required placeholder="Password" />
               <button class="btn" [disabled]="loading">Login</button>
             </form>
           } @else {
             <form (ngSubmit)="submitSignup()" class="form">
-              <input [(ngModel)]="signupName" name="signupName" type="text" required placeholder="Full Name" />
-              <input [(ngModel)]="signupEmail" name="signupEmail" type="email" required placeholder="Email" />
-              <input [(ngModel)]="signupPassword" name="signupPassword" type="password" minlength="6" required placeholder="Password" />
+              <input [(ngModel)]="signupName" name="signupName" type="text" autocomplete="name" required placeholder="Full Name" />
+              <input [(ngModel)]="signupEmail" name="signupEmail" type="email" autocomplete="email" required placeholder="Email" />
+              <input [(ngModel)]="signupPassword" name="signupPassword" type="password" autocomplete="new-password" minlength="6" required placeholder="Password" />
               <button class="btn" [disabled]="loading">Create Account</button>
             </form>
           }
@@ -86,7 +86,17 @@ export class NavbarComponent {
   signupPassword = '';
 
   togglePanel(): void {
-    this.panelOpen = !this.panelOpen;
+    const nextState = !this.panelOpen;
+    this.panelOpen = nextState;
+
+    if (!nextState) {
+      this.mode = 'login';
+      this.loginEmail = '';
+      this.loginPassword = '';
+      this.signupName = '';
+      this.signupEmail = '';
+      this.signupPassword = '';
+    }
   }
 
   submitLogin(): void {

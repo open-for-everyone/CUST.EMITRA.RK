@@ -77,6 +77,7 @@ export class HomeComponent implements OnInit {
   readonly updates = signal<string[]>([]);
   readonly updatesLoading = signal(false);
   readonly providers = signal<SocialProvider[]>([]);
+  readonly providersLoading = signal(false);
   readonly chatMessages = signal<ChatMessageVm[]>([]);
   readonly chatLoading = signal(false);
   readonly activity = signal<ActivityItem[]>([]);
@@ -84,7 +85,12 @@ export class HomeComponent implements OnInit {
   readonly chatOpen = signal(false);
 
   readonly isBusy = computed(
-    () => this.auth.authLoading() || this.updatesLoading() || this.chatLoading() || this.activityLoading()
+    () =>
+      this.auth.authLoading() ||
+      this.updatesLoading() ||
+      this.providersLoading() ||
+      this.chatLoading() ||
+      this.activityLoading()
   );
 
   ngOnInit(): void {
@@ -158,7 +164,11 @@ export class HomeComponent implements OnInit {
   }
 
   private loadProviders(): void {
-    this.auth.getSocialProviders().subscribe((providers) => this.providers.set(providers));
+    this.providersLoading.set(true);
+    this.auth
+      .getSocialProviders()
+      .pipe(finalize(() => this.providersLoading.set(false)))
+      .subscribe((providers) => this.providers.set(providers));
   }
 
   private loadAuthorizedData(): void {
