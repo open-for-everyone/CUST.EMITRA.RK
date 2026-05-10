@@ -25,6 +25,15 @@
         <option value="en">English</option>
         <option value="hi">हिन्दी</option>
       </select>
+      <button
+        class="btn ghost theme-toggle"
+        type="button"
+        (click)="themeService.toggleTheme()"
+        [attr.aria-label]="themeService.theme() === 'dark' ? language.t('themeToggleLight') : language.t('themeToggleDark')"
+        [title]="themeService.theme() === 'dark' ? language.t('themeToggleLight') : language.t('themeToggleDark')"
+      >
+        {{ themeService.theme() === 'dark' ? '☀️' : '🌙' }}
+      </button>
       @if (userName) {
         <span class="chip">{{ userName }}</span>
         <button class="btn ghost" type="button" (click)="logout.emit()">{{ language.t('navLogout') }}</button>

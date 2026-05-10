@@ -43,7 +43,15 @@ const TRANSLATIONS: Record<AppLanguage, Record<string, string>> = {
     authEmail: 'Email',
     authPassword: 'Password',
     authFullName: 'Full Name',
-    authCreateAccount: 'Create Account'
+    authCreateAccount: 'Create Account',
+    loginActivityTitle: 'Login History',
+    loginActivityEmpty: 'No login events recorded yet.',
+    actionActivityTitle: 'Recent Actions',
+    actionActivityEmpty: 'No actions recorded yet.',
+    themeToggleLight: 'Switch to light mode',
+    themeToggleDark: 'Switch to dark mode',
+    searchPlaceholder: 'Search a location...',
+    searchNoResults: 'No results found.'
   },
   hi: {
     brandName: 'आरके ऑनलाइन सेंटर',
@@ -83,7 +91,15 @@ const TRANSLATIONS: Record<AppLanguage, Record<string, string>> = {
     authEmail: 'ईमेल',
     authPassword: 'पासवर्ड',
     authFullName: 'पूरा नाम',
-    authCreateAccount: 'खाता बनाएं'
+    authCreateAccount: 'खाता बनाएं',
+    loginActivityTitle: 'लॉगिन इतिहास',
+    loginActivityEmpty: 'अभी तक कोई लॉगिन इवेंट नहीं।',
+    actionActivityTitle: 'हाल की गतिविधियां',
+    actionActivityEmpty: 'अभी तक कोई गतिविधि नहीं।',
+    themeToggleLight: 'लाइट मोड पर स्विच करें',
+    themeToggleDark: 'डार्क मोड पर स्विच करें',
+    searchPlaceholder: 'स्थान खोजें...',
+    searchNoResults: 'कोई परिणाम नहीं मिला।'
   }
 };
 

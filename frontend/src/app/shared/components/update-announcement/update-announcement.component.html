@@ -1,0 +1,12 @@
+@if (visible()) {
+  <div class="announcement-banner" role="status" aria-live="polite">
+    <span class="announcement-icon">🔔</span>
+    <span class="announcement-text">
+      <strong>What's New:</strong> {{ updates[0] }}
+      @if (updates.length > 1) {
+        <span class="announcement-more"> +{{ updates.length - 1 }} more update{{ updates.length > 2 ? 's' : '' }}</span>
+      }
+    </span>
+    <button class="announcement-dismiss" type="button" (click)="dismiss()" aria-label="Dismiss announcement">✕</button>
+  </div>
+}
