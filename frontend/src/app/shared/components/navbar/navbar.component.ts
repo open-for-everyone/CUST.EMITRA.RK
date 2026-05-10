@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { SocialProvider } from '../../../core/models/api.models';
 import { AppLanguage, LanguageService } from '../../../core/services/language.service';
+import { ThemeService } from '../../../core/services/theme.service';
 
 @Component({
   selector: 'app-navbar',
@@ -30,6 +31,7 @@ export class NavbarComponent implements OnChanges {
   signupEmail = '';
   signupPassword = '';
   readonly language = inject(LanguageService);
+  readonly themeService = inject(ThemeService);
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['userName'] && !changes['userName'].firstChange) {

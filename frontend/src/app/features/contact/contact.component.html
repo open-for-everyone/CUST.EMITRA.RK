@@ -33,13 +33,26 @@
       <div class="contact-map-column">
         <h3>Find our centre</h3>
         <div class="search-row">
-          <input
-            type="text"
-            placeholder="Add a location note"
-            [(ngModel)]="searchNote"
-            name="searchNote"
-            aria-label="Search location note"
-          />
+          <div class="search-wrapper">
+            <input
+              type="text"
+              [placeholder]="language.t('searchPlaceholder')"
+              [(ngModel)]="searchNote"
+              name="searchNote"
+              aria-label="Search location"
+              autocomplete="off"
+              (input)="onSearchInput(searchNote)"
+            />
+            @if (searchOpen() && searchResults().length) {
+              <ul class="search-dropdown" role="listbox">
+                @for (result of searchResults(); track result.place_id) {
+                  <li role="option" (click)="selectSearchResult(result)" (keydown.enter)="selectSearchResult(result)" tabindex="0">
+                    {{ result.display_name }}
+                  </li>
+                }
+              </ul>
+            }
+          </div>
         </div>
 
         <iframe

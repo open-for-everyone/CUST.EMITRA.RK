@@ -1,0 +1,20 @@
+<section class="card">
+  <h2>⚡ {{ language.t('actionActivityTitle') }}</h2>
+  @if (!isLoggedIn) {
+    <p>{{ language.t('activityLoginPrompt') }}</p>
+  } @else if (loading) {
+    <p>{{ language.t('activityLoading') }}</p>
+  } @else if (!items.length) {
+    <p class="muted-text">{{ language.t('actionActivityEmpty') }}</p>
+  } @else {
+    <ul>
+      @for (item of items; track item.createdAtUtc) {
+        <li class="activity-item">
+          <span class="activity-badge action-badge">{{ item.action }}</span>
+          <span class="activity-meta">{{ item.metadata || '—' }}</span>
+          <span class="activity-time">{{ item.createdAtUtc | date:'medium' }}</span>
+        </li>
+      }
+    </ul>
+  }
+</section>

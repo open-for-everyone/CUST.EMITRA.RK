@@ -5,7 +5,9 @@ import { NavbarComponent } from '../../shared/components/navbar/navbar.component
 import { ServicesComponent } from '../services/services.component';
 import { UpdatesComponent } from '../updates/updates.component';
 import { ChatComponent, ChatMessageVm } from '../chat/chat.component';
-import { ActivityComponent } from '../activity/activity.component';
+import { LoginActivityComponent } from '../activity/login-activity/login-activity.component';
+import { ActionActivityComponent } from '../activity/action-activity/action-activity.component';
+import { UpdateAnnouncementComponent } from '../../shared/components/update-announcement/update-announcement.component';
 import { AuthService } from '../../core/services/auth.service';
 import { UpdatesService } from '../../core/services/updates.service';
 import { ChatService } from '../../core/services/chat.service';
@@ -13,10 +15,12 @@ import { ActivityService } from '../../core/services/activity.service';
 import { ActivityItem, ChatHistoryItem, SocialProvider } from '../../core/models/api.models';
 import { LanguageService } from '../../core/services/language.service';
 
+const LOGIN_ACTIONS = new Set(['login', 'signin', 'signup', 'register', 'logout', 'auth', 'social-login']);
+
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [RouterLink, NavbarComponent, ServicesComponent, UpdatesComponent, ChatComponent, ActivityComponent],
+  imports: [RouterLink, NavbarComponent, ServicesComponent, UpdatesComponent, ChatComponent, LoginActivityComponent, ActionActivityComponent, UpdateAnnouncementComponent],
   templateUrl: './home.component.html'
 })
 export class HomeComponent implements OnInit {
@@ -37,6 +41,14 @@ export class HomeComponent implements OnInit {
   readonly chatOpen = signal(false);
   readonly authError = signal('');
   readonly language = inject(LanguageService);
+
+  readonly loginActivity = computed(() =>
+    this.activity().filter((i) => LOGIN_ACTIONS.has(i.action.toLowerCase()))
+  );
+
+  readonly actionActivity = computed(() =>
+    this.activity().filter((i) => !LOGIN_ACTIONS.has(i.action.toLowerCase()))
+  );
 
   readonly isBusy = computed(
     () =>

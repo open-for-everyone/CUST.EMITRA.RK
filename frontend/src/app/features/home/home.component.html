@@ -10,6 +10,8 @@
   (socialLogin)="onSocialLogin($event)"
 />
 
+<app-update-announcement [updates]="updates()" />
+
 @if (isBusy()) {
   <div class="progress-track" role="status" aria-label="Loading">
     <div class="progress-indicator"></div>
@@ -26,7 +28,8 @@
 
   <app-services />
   <app-updates [updates]="updates()" [loading]="updatesLoading()" />
-  <app-activity [isLoggedIn]="!!auth.user()" [loading]="activityLoading()" [items]="activity()" />
+  <app-login-activity [isLoggedIn]="!!auth.user()" [loading]="activityLoading()" [items]="loginActivity()" />
+  <app-action-activity [isLoggedIn]="!!auth.user()" [loading]="activityLoading()" [items]="actionActivity()" />
 
   <section class="card wide contact-cta">
     <h2>📞 {{ language.t('contactCtaTitle') }}</h2>
