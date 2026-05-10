@@ -1,15 +1,23 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { SocialProvider } from '../../../core/models/api.models';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   template: `
     <nav class="navbar">
       <div class="container nav-content">
-        <h1>RK eMitra</h1>
+        <div class="nav-left">
+          <h1><a class="brand-link" routerLink="/">RK eMitra</a></h1>
+          <div class="nav-links">
+            <a class="nav-link" routerLink="/">Home</a>
+            <a class="nav-link" routerLink="/contact">Contact Us</a>
+          </div>
+        </div>
+
         <div class="nav-actions">
           @if (userName) {
             <span class="chip">{{ userName }}</span>

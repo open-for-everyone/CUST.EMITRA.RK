@@ -258,3 +258,92 @@ input {
 .page {
   padding-bottom: 92px;
 }
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-content {
+  flex: 1;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.brand-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.nav-links {
+  display: flex;
+  gap: 12px;
+}
+
+.nav-link {
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.nav-link:hover {
+  color: var(--accent);
+}
+
+.contact-cta {
+  display: grid;
+  gap: 10px;
+}
+
+.contact-link {
+  text-decoration: none;
+  width: fit-content;
+}
+
+.contact-page {
+  padding-bottom: 28px;
+}
+
+.site-footer {
+  border-top: 1px solid var(--border);
+  background: rgb(255 255 255 / 92%);
+  padding: 20px 0;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.site-footer h3 {
+  margin: 0 0 8px;
+}
+
+.footer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.footer-list a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.footer-list a:hover {
+  color: var(--accent);
+}
+
+@media (max-width: 700px) {
+  .nav-links {
+    display: none;
+  }
+}

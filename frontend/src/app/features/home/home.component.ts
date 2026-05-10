@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
 import { ServicesComponent } from '../services/services.component';
@@ -15,7 +16,7 @@ import { ActivityItem, ChatHistoryItem, SocialProvider } from '../../core/models
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [NavbarComponent, ServicesComponent, UpdatesComponent, ChatComponent, ActivityComponent, TechComponent],
+  imports: [RouterLink, NavbarComponent, ServicesComponent, UpdatesComponent, ChatComponent, ActivityComponent, TechComponent],
   template: `
     <app-navbar
       [userName]="auth.user()?.name ?? ''"
@@ -44,14 +45,10 @@ import { ActivityItem, ChatHistoryItem, SocialProvider } from '../../core/models
       <app-activity [isLoggedIn]="!!auth.user()" [loading]="activityLoading()" [items]="activity()" />
       <app-tech />
 
-      <section class="card wide">
+      <section class="card wide contact-cta">
         <h2>Contact Us</h2>
-        <p>Need help with payments, forms, or authentication? Reach out to RK eMitra support.</p>
-        <ul>
-          @for (item of contactDetails; track item.label) {
-            <li><strong>{{ item.label }}:</strong> {{ item.value }}</li>
-          }
-        </ul>
+        <p>Need help with payments, forms, or authentication? Visit the dedicated contact page.</p>
+        <a class="btn contact-link" routerLink="/contact">Open Contact Page</a>
       </section>
     </main>
 
@@ -89,12 +86,6 @@ export class HomeComponent implements OnInit {
   readonly isBusy = computed(
     () => this.auth.authLoading() || this.updatesLoading() || this.chatLoading() || this.activityLoading()
   );
-
-  readonly contactDetails = [
-    { label: 'Phone', value: '+91-141-555-0199' },
-    { label: 'Email', value: 'support@rkemitra.in' },
-    { label: 'Hours', value: 'Mon-Sat, 9:00 AM - 7:00 PM' }
-  ];
 
   ngOnInit(): void {
     this.loadUpdates();
