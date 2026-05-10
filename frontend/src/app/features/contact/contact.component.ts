@@ -69,7 +69,7 @@ import { SocialProvider } from '../../core/models/api.models';
             ></iframe>
 
             <div class="map-actions">
-              <button class="btn ghost" type="button" (click)="pinCentre()">Pin centre</button>
+              <button class="btn ghost" type="button" (click)="pinCenter()">Pin centre</button>
               <button class="btn ghost" type="button" (click)="useMyLocation()">Use my location</button>
               <button class="btn ghost" type="button" (click)="clearLocation()">Clear</button>
             </div>
@@ -152,6 +152,7 @@ import { SocialProvider } from '../../core/models/api.models';
   `
 })
 export class ContactComponent implements OnInit {
+  private readonly GEOLOCATION_TIMEOUT_MS = 10000;
   readonly auth = inject(AuthService);
   readonly providers = signal<SocialProvider[]>([]);
   readonly providersLoading = signal(false);
@@ -227,7 +228,7 @@ export class ContactComponent implements OnInit {
     this.auth.startSocialLogin(provider);
   }
 
-  pinCentre(): void {
+  pinCenter(): void {
     this.locationError.set('');
     this.locationAccuracy.set(null);
     this.mapLat.set(this.centerLat);
@@ -251,12 +252,12 @@ export class ContactComponent implements OnInit {
       () => {
         this.locationError.set('Unable to access your current location. Please allow location permissions.');
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: this.GEOLOCATION_TIMEOUT_MS }
     );
   }
 
   clearLocation(): void {
-    this.pinCentre();
+    this.pinCenter();
     this.searchNote = '';
   }
 
