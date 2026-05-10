@@ -59,7 +59,7 @@
         </div>
         <div class="hero-stats">
           <div class="stat-chip" ng-repeat="stat in vm.heroStats">
-            <span class="stat-icon">{{stat.icon}}</span>
+            <span class="stat-icon" aria-hidden="true">{{stat.icon}}</span>
             <div>
               <div class="stat-value">{{stat.value}}</div>
               <div class="stat-label">{{stat.label}}</div>
@@ -78,7 +78,7 @@
         </div>
         <ul class="service-list">
           <li ng-repeat="svc in vm.services" class="service-item">
-            <span class="svc-icon">{{svc.icon}}</span>
+            <span class="svc-icon" aria-hidden="true">{{svc.icon}}</span>
             <span>{{svc.label}}</span>
           </li>
         </ul>
@@ -92,7 +92,7 @@
         </div>
         <ul class="update-list" ng-if="vm.updates.length">
           <li ng-repeat="item in vm.updates" class="update-item">
-            <span class="update-dot"></span>{{item}}
+            <span class="update-dot" aria-hidden="true"></span>{{item}}
           </li>
         </ul>
         <p class="empty-state" ng-if="!vm.updates.length && !vm.updatesLoading">No updates available.</p>
@@ -223,7 +223,7 @@
         </div>
         <div class="tech-grid">
           <div class="tech-item" ng-repeat="tech in vm.techStack">
-            <span class="tech-icon">{{tech.icon}}</span>
+            <span class="tech-icon" aria-hidden="true">{{tech.icon}}</span>
             <div>
               <div class="tech-name">{{tech.name}}</div>
               <div class="tech-desc">{{tech.desc}}</div>

@@ -59,7 +59,9 @@
 /* ---------- Reset & base ---------- */
 *, *::before, *::after { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
 
 body {
   margin: 0;
@@ -112,7 +114,7 @@ body {
 
 .nav-logo {
   font-size: 1.4rem;
-  filter: drop-shadow(0 0 6px rgba(79,70,229,0.5));
+  filter: drop-shadow(0 0 4px rgba(79,70,229,0.3));
 }
 
 .nav-subtitle {
