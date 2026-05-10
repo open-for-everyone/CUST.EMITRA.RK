@@ -43,6 +43,15 @@ Features: component-based Angular UI, latest updates from API, Google Gemini AI 
 
 > Baseline values are local-development measurements and should be replaced by staging/production telemetry for release decisions.
 
+### Phase 1 outcome snapshot (local, 2026-05-10)
+
+- Frontend production build (Angular, lazy loaded routes):
+  - Initial total: **318.82 kB raw**, estimated transfer **89.15 kB**
+  - Lazy chunks introduced: Home (**22.54 kB**), Contact (**11.04 kB**), Auth callback (**0.76 kB**)
+- Backend endpoint timings (local dev run, with caching and correlation middleware):
+  - `GET /api/health`: **~82 ms**
+  - `GET /api/updates`: **~7 ms**
+
 ---
 
 ## Project structure

@@ -502,9 +502,9 @@ app.MapPost("/api/chat", [Authorize] async (
 app.MapGet("/api/chat/history", [Authorize] async (
     ClaimsPrincipal principal,
     AppDbContext db,
+    CancellationToken cancellationToken,
     int page = 1,
-    int pageSize = 20,
-    CancellationToken cancellationToken) =>
+    int pageSize = 20) =>
 {
     var userId = principal.GetUserId();
     if (userId is null)
@@ -552,9 +552,9 @@ app.MapGet("/api/chat/history", [Authorize] async (
 app.MapGet("/api/activity", [Authorize] async (
     ClaimsPrincipal principal,
     AppDbContext db,
+    CancellationToken cancellationToken,
     int page = 1,
-    int pageSize = 30,
-    CancellationToken cancellationToken) =>
+    int pageSize = 30) =>
 {
     var userId = principal.GetUserId();
     if (userId is null)
