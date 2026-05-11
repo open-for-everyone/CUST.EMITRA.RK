@@ -31,7 +31,8 @@ class GoogleAiChatService(IHttpClientFactory httpClientFactory, IConfiguration c
                         {
                             new
                             {
-                                text = $@"You are a helpful assistant for RK Online Centre, an eMitra service centre in Jaipur, Rajasthan.
+                                text = $@"You are a helpful assistant for RK Online Centre, an eMitra service centre in Shamsabad.
+Contact person: Ramkumar.
 User name: {safeUserName}.
 
 Services offered by RK Online Centre:
