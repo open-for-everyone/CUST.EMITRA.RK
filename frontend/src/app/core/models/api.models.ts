@@ -1,7 +1,10 @@
 export interface AuthResponse {
-  token: string;
-  name: string;
-  email: string;
+  token?: string | null;
+  name?: string | null;
+  email?: string | null;
+  mfaRequired?: boolean;
+  mfaChallengeToken?: string | null;
+  availableMfaMethods?: string[] | null;
 }
 
 export interface UserProfile {
@@ -32,6 +35,21 @@ export interface SocialProvider {
   displayName: string;
 }
 
+export interface PublicContact {
+  language: string;
+  phone: string;
+  whatsapp: string;
+  email: string;
+  supportNotice: string;
+}
+
+export interface SecurityAlertResponse {
+  message: string;
+}
+
+export interface PasswordResetResponse {
+  message: string;
+}
 
 export interface PagedResponse<T> {
   items: T[];

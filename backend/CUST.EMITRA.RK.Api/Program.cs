@@ -23,6 +23,11 @@ const string LinkedInSocialProvider = "linkedin";
 const string CorrelationIdHeader = "X-Correlation-ID";
 const string UpdatesCacheKey = "api:updates:v1";
 const string DefaultMongoDatabaseName = "emitra";
+const string ContactPhoneSettingKey = "contact.phone";
+const string ContactWhatsAppSettingKey = "contact.whatsapp";
+const string ContactEmailSettingKey = "contact.email";
+const string ContactSupportNoticeSettingKey = "contact.supportNotice";
+const int UserAgentMaxLength = 120;
 
 builder.Services.AddOpenApi();
 builder.Services.AddCors(options =>
@@ -191,6 +196,8 @@ using (var scope = app.Services.CreateScope())
     {
         db.Database.EnsureCreated();
     }
+
+    await SeedPublicSettingsAsync(db);
 }
 
 if (app.Environment.IsDevelopment())
@@ -244,6 +251,28 @@ app.MapGet("/api/updates", (IMemoryCache cache) =>
     return Results.Ok(payload);
 })
    .WithName("GetUpdates");
+
+app.MapGet("/api/settings/public-contact", async (AppDbContext db, string? language, CancellationToken cancellationToken) =>
+{
+    var requestedLanguage = string.IsNullOrWhiteSpace(language) ? "en" : language.Trim().ToLowerInvariant();
+    var normalizedLanguage = requestedLanguage is "hi" or "en" ? requestedLanguage : "en";
+
+    var settings = await db.PublicSettings
+        .Where(s => s.Language == normalizedLanguage || s.Language == "en")
+        .ToListAsync(cancellationToken);
+
+    string Resolve(string key, string fallback) =>
+        settings.FirstOrDefault(s => s.Language == normalizedLanguage && s.Key == key)?.Value
+        ?? settings.FirstOrDefault(s => s.Language == "en" && s.Key == key)?.Value
+        ?? fallback;
+
+    return Results.Ok(new PublicContactResponse(
+        normalizedLanguage,
+        Resolve(ContactPhoneSettingKey, "+91 9982761929"),
+        Resolve(ContactWhatsAppSettingKey, "+91 9982761929"),
+        Resolve(ContactEmailSettingKey, "support@rkemitra.in"),
+        Resolve(ContactSupportNoticeSettingKey, "If this login was not performed by you, please reset your password and contact support immediately.")));
+});
 
 app.MapGet("/api/auth/social/providers", () =>
 {
@@ -409,7 +438,7 @@ app.MapPost("/api/auth/signup", async (
     logger.LogInformation("New user signup completed for user ID {UserId}", user.Id);
 
     var token = JwtTokenFactory.Create(user, jwtIssuer, jwtAudience, jwtSigningKey);
-    return Results.Ok(new AuthResponse(token, user.Name, user.Email));
+    return Results.Ok(new AuthResponse(Token: token, Name: user.Name, Email: user.Email));
 });
 
 app.MapPost("/api/auth/login", async (
@@ -431,18 +460,69 @@ app.MapPost("/api/auth/login", async (
         return ApiResponses.Unauthorized("Authentication is required.");
     }
 
+    if (user.MfaEnabled)
+    {
+        if (string.IsNullOrWhiteSpace(request.MfaCode))
+        {
+            var challengeToken = Guid.NewGuid().ToString("N");
+            var newChallengeHash = MfaSecurity.HashChallengeToken(challengeToken);
+            var newChallenge = new MfaLoginChallenge
+            {
+                UserId = user.Id,
+                ChallengeTokenHash = newChallengeHash,
+                ExpiresAtUtc = DateTime.UtcNow.AddMinutes(5)
+            };
+            db.MfaLoginChallenges.Add(newChallenge);
+            await db.SaveChangesAsync(cancellationToken);
+
+            return Results.Ok(new AuthResponse(
+                Token: null,
+                Name: null,
+                Email: null,
+                MfaRequired: true,
+                MfaChallengeToken: challengeToken,
+                AvailableMfaMethods: ["authenticator", "recovery_code"]));
+        }
+
+        if (string.IsNullOrWhiteSpace(request.MfaChallengeToken))
+        {
+            return ApiResponses.Unauthorized("MFA challenge token is required.");
+        }
+
+        var challengeHash = MfaSecurity.HashChallengeToken(request.MfaChallengeToken);
+        var challenge = await db.MfaLoginChallenges
+            .Where(c => c.UserId == user.Id && c.ChallengeTokenHash == challengeHash)
+            .OrderByDescending(c => c.CreatedAtUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (challenge is null || challenge.ExpiresAtUtc < DateTime.UtcNow)
+        {
+            return ApiResponses.Unauthorized("MFA challenge has expired. Please login again.");
+        }
+
+        var codeAccepted = MfaSecurity.VerifyAuthenticatorCode(user.MfaAuthenticatorSecret, request.MfaCode)
+            || MfaSecurity.TryUseRecoveryCode(user, request.MfaCode);
+        if (!codeAccepted)
+        {
+            return ApiResponses.Unauthorized("Invalid MFA code.");
+        }
+
+        db.MfaLoginChallenges.Remove(challenge);
+    }
+
+    var loginMetadata = BuildLoginMetadata(httpContext);
     db.ActivityLogs.Add(new ActivityLog
     {
         UserId = user.Id,
         Action = "login",
-        Metadata = "User logged in"
+        Metadata = loginMetadata
     });
 
     await db.SaveChangesAsync(cancellationToken);
-    await notifier.NotifyAsync("login", user.Id, "User logged in", cancellationToken);
+    await notifier.NotifyAsync("login", user.Id, $"User logged in with {loginMetadata}", cancellationToken);
 
     var token = JwtTokenFactory.Create(user, jwtIssuer, jwtAudience, jwtSigningKey);
-    return Results.Ok(new AuthResponse(token, user.Name, user.Email));
+    return Results.Ok(new AuthResponse(Token: token, Name: user.Name, Email: user.Email));
 });
 
 app.MapGet("/api/auth/me", [Authorize] async (ClaimsPrincipal principal, AppDbContext db, CancellationToken cancellationToken) =>
@@ -457,6 +537,301 @@ app.MapGet("/api/auth/me", [Authorize] async (ClaimsPrincipal principal, AppDbCo
     return user is null
         ? ApiResponses.Unauthorized("User profile not found.")
         : Results.Ok(new UserProfileResponse(user.Name, user.Email, user.CreatedAtUtc));
+});
+
+app.MapGet("/api/auth/security-alert", [Authorize] async (
+    ClaimsPrincipal principal,
+    AppDbContext db,
+    string? language,
+    CancellationToken cancellationToken) =>
+{
+    var userId = principal.GetUserId();
+    if (userId is null)
+    {
+        return ApiResponses.Unauthorized("Authentication is required.");
+    }
+
+    var latestLogin = await db.ActivityLogs
+        .Where(a => a.UserId == userId && a.Action == "login")
+        .OrderByDescending(a => a.CreatedAtUtc)
+        .FirstOrDefaultAsync(cancellationToken);
+
+    if (latestLogin is null)
+    {
+        return Results.Ok(new { message = string.Empty });
+    }
+
+    var normalizedLanguage = string.Equals(language, "hi", StringComparison.OrdinalIgnoreCase) ? "hi" : "en";
+    var supportNotice = await ResolvePublicSettingValueAsync(db, normalizedLanguage, ContactSupportNoticeSettingKey, cancellationToken)
+        ?? "If this login was not performed by you, please reset your password and contact support immediately.";
+    var loginPrefix = normalizedLanguage == "hi" ? "आपने इस डिवाइस और लोकेशन से लॉगिन किया:" : "You logged in with this device and location:";
+    return Results.Ok(new { message = $"{loginPrefix} {latestLogin.Metadata}. {supportNotice}" });
+});
+
+app.MapGet("/api/auth/mfa/setup", [Authorize] async (
+    ClaimsPrincipal principal,
+    AppDbContext db,
+    CancellationToken cancellationToken) =>
+{
+    var userId = principal.GetUserId();
+    if (userId is null)
+    {
+        return ApiResponses.Unauthorized("Authentication is required.");
+    }
+
+    var user = await db.Users.FindAsync([userId.Value], cancellationToken);
+    if (user is null)
+    {
+        return ApiResponses.Unauthorized("User profile not found.");
+    }
+
+    var secret = user.MfaAuthenticatorSecret;
+    if (string.IsNullOrWhiteSpace(secret))
+    {
+        secret = MfaSecurity.GenerateAuthenticatorSecret();
+        user.MfaAuthenticatorSecret = secret;
+    }
+
+    var recoveryCodes = MfaSecurity.GenerateRecoveryCodes();
+    user.MfaRecoveryCodesJson = MfaSecurity.SerializeRecoveryCodes(recoveryCodes);
+    await db.SaveChangesAsync(cancellationToken);
+
+    var issuer = Uri.EscapeDataString("RK Online Centre");
+    var accountName = Uri.EscapeDataString(user.Email);
+    var secretBase32 = ConvertToBase32(Convert.FromBase64String(secret));
+
+    return Results.Ok(new
+    {
+        secret = secretBase32,
+        otpAuthUri = $"otpauth://totp/{issuer}:{accountName}?secret={secretBase32}&issuer={issuer}",
+        recoveryCodes
+    });
+});
+
+app.MapPost("/api/auth/mfa/enable", [Authorize] async (
+    ClaimsPrincipal principal,
+    AppDbContext db,
+    MfaCodeRequest request,
+    CancellationToken cancellationToken) =>
+{
+    var userId = principal.GetUserId();
+    if (userId is null)
+    {
+        return ApiResponses.Unauthorized("Authentication is required.");
+    }
+
+    var user = await db.Users.FindAsync([userId.Value], cancellationToken);
+    if (user is null)
+    {
+        return ApiResponses.Unauthorized("User profile not found.");
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Code))
+    {
+        return ApiResponses.Validation("MFA code is required.");
+    }
+
+    if (!MfaSecurity.VerifyAuthenticatorCode(user.MfaAuthenticatorSecret, request.Code))
+    {
+        return ApiResponses.Unauthorized("Invalid authenticator code.");
+    }
+
+    user.MfaEnabled = true;
+    db.ActivityLogs.Add(new ActivityLog
+    {
+        UserId = user.Id,
+        Action = "mfa-enabled",
+        Metadata = "User enabled authenticator and recovery-code MFA."
+    });
+    await db.SaveChangesAsync(cancellationToken);
+    return Results.Ok(new { enabled = true });
+});
+
+app.MapPost("/api/auth/mfa/disable", [Authorize] async (
+    ClaimsPrincipal principal,
+    AppDbContext db,
+    MfaCodeRequest request,
+    CancellationToken cancellationToken) =>
+{
+    var userId = principal.GetUserId();
+    if (userId is null)
+    {
+        return ApiResponses.Unauthorized("Authentication is required.");
+    }
+
+    var user = await db.Users.FindAsync([userId.Value], cancellationToken);
+    if (user is null)
+    {
+        return ApiResponses.Unauthorized("User profile not found.");
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Code))
+    {
+        return ApiResponses.Validation("MFA code is required.");
+    }
+
+    var isValidCode = MfaSecurity.VerifyAuthenticatorCode(user.MfaAuthenticatorSecret, request.Code)
+        || MfaSecurity.TryUseRecoveryCode(user, request.Code);
+    if (!isValidCode)
+    {
+        return ApiResponses.Unauthorized("Invalid MFA code.");
+    }
+
+    user.MfaEnabled = false;
+    user.MfaAuthenticatorSecret = null;
+    user.MfaRecoveryCodesJson = null;
+    db.ActivityLogs.Add(new ActivityLog
+    {
+        UserId = user.Id,
+        Action = "mfa-disabled",
+        Metadata = "User disabled MFA."
+    });
+    await db.SaveChangesAsync(cancellationToken);
+    return Results.Ok(new { enabled = false });
+});
+
+app.MapPost("/api/auth/change-password", [Authorize] async (
+    ChangePasswordRequest request,
+    ClaimsPrincipal principal,
+    AppDbContext db,
+    CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(request.CurrentPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
+    {
+        return ApiResponses.Validation("Current password and new password are required.");
+    }
+
+    if (request.NewPassword.Length < 6)
+    {
+        return ApiResponses.Validation("New password must be at least 6 characters long.");
+    }
+
+    var userId = principal.GetUserId();
+    if (userId is null)
+    {
+        return ApiResponses.Unauthorized("Authentication is required.");
+    }
+
+    var user = await db.Users.FindAsync([userId.Value], cancellationToken);
+    if (user is null)
+    {
+        return ApiResponses.Unauthorized("User profile not found.");
+    }
+
+    if (!PasswordHasher.Verify(request.CurrentPassword, user.PasswordHash))
+    {
+        return ApiResponses.Unauthorized("Current password is incorrect.");
+    }
+
+    user.PasswordHash = PasswordHasher.Hash(request.NewPassword);
+    db.ActivityLogs.Add(new ActivityLog
+    {
+        UserId = user.Id,
+        Action = "password-changed",
+        Metadata = "User changed their password."
+    });
+    await db.SaveChangesAsync(cancellationToken);
+    return Results.Ok(new { message = "Password changed successfully." });
+});
+
+app.MapPost("/api/auth/forgot-password", async (
+    ForgotPasswordRequest request,
+    AppDbContext db,
+    BackendTeamNotifier notifier,
+    ILoggerFactory loggerFactory,
+    HttpContext httpContext,
+    CancellationToken cancellationToken) =>
+{
+    var logger = loggerFactory.CreateLogger("Auth");
+
+    if (string.IsNullOrWhiteSpace(request.Email))
+    {
+        return ApiResponses.Validation("Email is required.");
+    }
+
+    var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+
+    // Always return success to prevent email enumeration.
+    var user = await db.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail, cancellationToken);
+    if (user is null)
+    {
+        return Results.Ok(new { message = "If the email is registered, password reset instructions have been sent." });
+    }
+
+    // Expire any previous unused tokens for this user.
+    var oldTokens = await db.PasswordResetTokens
+        .Where(t => t.UserId == user.Id && !t.Used && t.ExpiresAtUtc > DateTime.UtcNow)
+        .ToListAsync(cancellationToken);
+    foreach (var old in oldTokens)
+    {
+        old.Used = true;
+    }
+
+    var rawToken = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
+    var tokenHash = MfaSecurity.HashChallengeToken(rawToken);
+    db.PasswordResetTokens.Add(new PasswordResetToken
+    {
+        UserId = user.Id,
+        TokenHash = tokenHash,
+        ExpiresAtUtc = DateTime.UtcNow.AddHours(1)
+    });
+    db.ActivityLogs.Add(new ActivityLog
+    {
+        UserId = user.Id,
+        Action = "forgot-password",
+        Metadata = $"Password reset requested from IP {httpContext.Connection.RemoteIpAddress}"
+    });
+    await db.SaveChangesAsync(cancellationToken);
+
+    // Notify backend team with the reset token so they can relay it (email integration point).
+    var frontendBase = httpContext.Request.Headers["Origin"].FirstOrDefault()
+        ?? httpContext.Request.Scheme + "://" + httpContext.Request.Host;
+    // Sanitize frontendBase to prevent log injection before logging
+    var sanitizedBase = frontendBase.Replace('\r', '_').Replace('\n', '_');
+    var resetUrl = $"{frontendBase}/reset-password?token={rawToken}";
+    logger.LogInformation("Password reset requested for user ID {UserId}. Reset URL: {ResetUrl}", user.Id, $"{sanitizedBase}/reset-password?token=[REDACTED]");
+    await notifier.NotifyAsync("forgot-password", user.Id, $"Password reset URL: {resetUrl}", cancellationToken);
+
+    // Do not expose the reset URL in the response to prevent token leakage through API observers.
+    return Results.Ok(new { message = "If the email is registered, password reset instructions have been sent." });
+});
+
+app.MapPost("/api/auth/reset-password", async (
+    ResetPasswordRequest request,
+    AppDbContext db,
+    CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Token))
+    {
+        return ApiResponses.Validation("Reset token is required.");
+    }
+
+    if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 6)
+    {
+        return ApiResponses.Validation("New password must be at least 6 characters long.");
+    }
+
+    var tokenHash = MfaSecurity.HashChallengeToken(request.Token);
+    var resetToken = await db.PasswordResetTokens
+        .Include(t => t.User)
+        .Where(t => t.TokenHash == tokenHash && !t.Used && t.ExpiresAtUtc > DateTime.UtcNow)
+        .FirstOrDefaultAsync(cancellationToken);
+
+    if (resetToken is null || resetToken.User is null)
+    {
+        return ApiResponses.Validation("The reset link is invalid or has expired. Please request a new one.");
+    }
+
+    resetToken.User.PasswordHash = PasswordHasher.Hash(request.NewPassword);
+    resetToken.Used = true;
+    db.ActivityLogs.Add(new ActivityLog
+    {
+        UserId = resetToken.UserId,
+        Action = "password-reset",
+        Metadata = "Password was reset using a reset token."
+    });
+    await db.SaveChangesAsync(cancellationToken);
+    return Results.Ok(new { message = "Password has been reset successfully. You can now log in." });
 });
 
 app.MapPost("/api/chat", [Authorize] async (
@@ -612,6 +987,108 @@ app.MapGet("/api/activity", [Authorize] async (
 });
 
 app.Run();
+
+static async Task SeedPublicSettingsAsync(AppDbContext db)
+{
+    var defaults = new Dictionary<(string Language, string Key), string>
+    {
+        [("en", ContactPhoneSettingKey)] = "+91 9982761929",
+        [("hi", ContactPhoneSettingKey)] = "+91 9982761929",
+        [("en", ContactWhatsAppSettingKey)] = "+91 9982761929",
+        [("hi", ContactWhatsAppSettingKey)] = "+91 9982761929",
+        [("en", ContactEmailSettingKey)] = "support@rkemitra.in",
+        [("hi", ContactEmailSettingKey)] = "support@rkemitra.in",
+        [("en", ContactSupportNoticeSettingKey)] = "If this login was not performed by you, please reset your password and contact support immediately.",
+        [("hi", ContactSupportNoticeSettingKey)] = "अगर यह लॉगिन आपने नहीं किया है, तो तुरंत पासवर्ड बदलें और सहायता टीम से संपर्क करें।"
+    };
+
+    var languages = defaults.Keys.Select(k => k.Language).Distinct().ToArray();
+    var existing = await db.PublicSettings
+        .Where(s => languages.Contains(s.Language))
+        .ToListAsync();
+    foreach (var ((language, key), value) in defaults)
+    {
+        if (existing.Any(s => s.Language == language && s.Key == key))
+        {
+            continue;
+        }
+
+        db.PublicSettings.Add(new PublicSetting
+        {
+            Language = language,
+            Key = key,
+            Value = value
+        });
+    }
+
+    await db.SaveChangesAsync();
+}
+
+static async Task<string?> ResolvePublicSettingValueAsync(AppDbContext db, string language, string key, CancellationToken cancellationToken)
+{
+    var requested = language.ToLowerInvariant() == "hi" ? "hi" : "en";
+    var value = await db.PublicSettings
+        .Where(s => s.Key == key && (s.Language == requested || s.Language == "en"))
+        .OrderByDescending(s => s.Language == requested)
+        .Select(s => s.Value)
+        .FirstOrDefaultAsync(cancellationToken);
+    return value;
+}
+
+static string BuildLoginMetadata(HttpContext httpContext)
+{
+    var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+    var forwarded = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+    if (!string.IsNullOrWhiteSpace(forwarded))
+    {
+        ip = forwarded.Split(',')[0].Trim();
+    }
+
+    var userAgent = httpContext.Request.Headers.UserAgent.ToString();
+    var device = "unknown device";
+    if (!string.IsNullOrWhiteSpace(userAgent))
+    {
+        device = userAgent.Length > UserAgentMaxLength
+            ? $"{userAgent[..UserAgentMaxLength]}..."
+            : userAgent;
+    }
+    var location = httpContext.Request.Headers["X-Geo-Country"].FirstOrDefault();
+    if (string.IsNullOrWhiteSpace(location))
+    {
+        location = httpContext.Request.Headers["CF-IPCountry"].FirstOrDefault();
+    }
+
+    location = string.IsNullOrWhiteSpace(location) ? "unknown location" : location.Trim();
+    return $"device={device}; ip={ip}; location={location}";
+}
+
+static string ConvertToBase32(byte[] data)
+{
+    const string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+    var output = new StringBuilder((int)Math.Ceiling(data.Length / 5d) * 8);
+    var bitBuffer = 0;
+    var bitCount = 0;
+
+    foreach (var b in data)
+    {
+        bitBuffer = (bitBuffer << 8) | b;
+        bitCount += 8;
+        while (bitCount >= 5)
+        {
+            var index = (bitBuffer >> (bitCount - 5)) & 0x1F;
+            output.Append(alphabet[index]);
+            bitCount -= 5;
+        }
+    }
+
+    if (bitCount > 0)
+    {
+        var index = (bitBuffer << (5 - bitCount)) & 0x1F;
+        output.Append(alphabet[index]);
+    }
+
+    return output.ToString();
+}
 
 static string? TryResolveMongoDatabaseName(string connectionString)
 {

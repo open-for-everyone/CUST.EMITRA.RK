@@ -1,6 +1,8 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using Microsoft.IdentityModel.Tokens;
 
 static class PasswordHasher
@@ -102,5 +104,126 @@ static class SocialReturnUrlResolver
 
         var candidate = email.Split('@', 2, StringSplitOptions.TrimEntries)[0];
         return string.IsNullOrWhiteSpace(candidate) ? "User" : candidate;
+    }
+}
+
+static class MfaSecurity
+{
+    private const int RecoveryCodeBytes = 5;
+
+    public static string GenerateAuthenticatorSecret()
+    {
+        return Convert.ToBase64String(RandomNumberGenerator.GetBytes(20));
+    }
+
+    public static IReadOnlyList<string> GenerateRecoveryCodes(int count = 8)
+    {
+        var codes = new List<string>(count);
+        for (var i = 0; i < count; i++)
+        {
+            var bytes = RandomNumberGenerator.GetBytes(RecoveryCodeBytes);
+            codes.Add(Convert.ToHexString(bytes));
+        }
+
+        return codes;
+    }
+
+    public static string SerializeRecoveryCodes(IReadOnlyCollection<string> codes) =>
+        JsonSerializer.Serialize(codes.Select(HashRecoveryCode).ToArray());
+
+    public static bool TryUseRecoveryCode(AppUser user, string candidateCode)
+    {
+        if (string.IsNullOrWhiteSpace(candidateCode) || string.IsNullOrWhiteSpace(user.MfaRecoveryCodesJson))
+        {
+            return false;
+        }
+
+        var storedHashes = JsonSerializer.Deserialize<List<string>>(user.MfaRecoveryCodesJson);
+        if (storedHashes is null || storedHashes.Count == 0)
+        {
+            return false;
+        }
+
+        var codeHash = HashRecoveryCode(candidateCode);
+        var index = storedHashes.FindIndex(value => string.Equals(value, codeHash, StringComparison.Ordinal));
+        if (index < 0)
+        {
+            return false;
+        }
+
+        storedHashes.RemoveAt(index);
+        user.MfaRecoveryCodesJson = JsonSerializer.Serialize(storedHashes);
+        return true;
+    }
+
+    public static bool VerifyAuthenticatorCode(string? secret, string? code, DateTime? nowUtc = null)
+    {
+        if (string.IsNullOrWhiteSpace(secret) || string.IsNullOrWhiteSpace(code))
+        {
+            return false;
+        }
+
+        var normalizedCode = new string(code.Where(char.IsDigit).ToArray());
+        if (normalizedCode.Length != 6)
+        {
+            return false;
+        }
+
+        byte[] key;
+        try
+        {
+            key = Convert.FromBase64String(secret);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+        var timestamp = (nowUtc ?? DateTime.UtcNow).ToUniversalTime();
+        var unixWindow = new DateTimeOffset(timestamp).ToUnixTimeSeconds() / 30;
+
+        for (var offset = -1L; offset <= 1L; offset++)
+        {
+            var candidate = ComputeTotp(key, unixWindow + offset);
+            if (string.Equals(candidate, normalizedCode, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static string HashChallengeToken(string token)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(token));
+        return Convert.ToBase64String(hash);
+    }
+
+    private static string HashRecoveryCode(string code)
+    {
+        var normalized = code.Trim().ToUpperInvariant();
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(normalized));
+        return Convert.ToBase64String(hash);
+    }
+
+    private static string ComputeTotp(byte[] key, long timestepNumber)
+    {
+        Span<byte> timestepBytes = stackalloc byte[8];
+        for (var i = 7; i >= 0; i--)
+        {
+            timestepBytes[i] = (byte)(timestepNumber & 0xFF);
+            timestepNumber >>= 8;
+        }
+
+        using var hmac = new HMACSHA1(key);
+        var hash = hmac.ComputeHash(timestepBytes.ToArray());
+        var offset = hash[^1] & 0x0F;
+        var binary =
+            ((hash[offset] & 0x7f) << 24) |
+            (hash[offset + 1] << 16) |
+            (hash[offset + 2] << 8) |
+            hash[offset + 3];
+        var otp = binary % 1_000_000;
+        return otp.ToString("D6");
     }
 }

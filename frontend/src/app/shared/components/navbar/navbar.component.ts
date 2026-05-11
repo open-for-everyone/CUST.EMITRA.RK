@@ -16,9 +16,11 @@ export class NavbarComponent implements OnChanges {
   @Input() loading = false;
   @Input() providers: SocialProvider[] = [];
   @Input() authError = '';
+  @Input() mfaRequired = false;
+  @Input() availableMfaMethods: string[] = [];
 
   @Output() logout = new EventEmitter<void>();
-  @Output() login = new EventEmitter<{ email: string; password: string }>();
+  @Output() login = new EventEmitter<{ email: string; password: string; mfaCode?: string }>();
   @Output() signup = new EventEmitter<{ name: string; email: string; password: string }>();
   @Output() socialLogin = new EventEmitter<string>();
   @Output() clearAuthError = new EventEmitter<void>();
@@ -27,6 +29,7 @@ export class NavbarComponent implements OnChanges {
   mode: 'login' | 'signup' = 'login';
   loginEmail = '';
   loginPassword = '';
+  mfaCode = '';
   signupName = '';
   signupEmail = '';
   signupPassword = '';
@@ -54,13 +57,14 @@ export class NavbarComponent implements OnChanges {
     this.mode = 'login';
     this.loginEmail = '';
     this.loginPassword = '';
+    this.mfaCode = '';
     this.signupName = '';
     this.signupEmail = '';
     this.signupPassword = '';
   }
 
   submitLogin(): void {
-    this.login.emit({ email: this.loginEmail, password: this.loginPassword });
+    this.login.emit({ email: this.loginEmail, password: this.loginPassword, mfaCode: this.mfaCode });
   }
 
   submitSignup(): void {

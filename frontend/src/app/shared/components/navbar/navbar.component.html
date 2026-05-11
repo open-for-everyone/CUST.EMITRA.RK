@@ -72,7 +72,22 @@
             required
             [placeholder]="language.t('authPassword')"
           />
+          @if (mfaRequired) {
+            <input
+              [(ngModel)]="mfaCode"
+              name="mfaCode"
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              required
+              placeholder="MFA code"
+            />
+            @if (availableMfaMethods.length) {
+              <p class="muted-text">Methods: {{ availableMfaMethods.join(', ') }}</p>
+            }
+          }
           <button class="btn" [disabled]="loading">{{ language.t('navLogin') }}</button>
+          <a class="forgot-link" routerLink="/forgot-password" (click)="closePanelAndReset()">{{ language.t('forgotPasswordLink') }}</a>
         </form>
       } @else {
         <form (ngSubmit)="submitSignup()" class="form">

@@ -16,8 +16,8 @@
     <section>
       <h3>{{ language.t('footerContactInfo') }}</h3>
       <ul class="footer-list">
-        <li>☎️ {{ language.t('footerPhone') }}: +91-141-555-0199</li>
-        <li>✉️ {{ language.t('footerEmail') }}: support@rkemitra.in</li>
+        <li>☎️ {{ language.t('footerPhone') }}: {{ phoneDisplay() }}</li>
+        <li>✉️ {{ language.t('footerEmail') }}: {{ emailDisplay() }}</li>
         <li>🕒 {{ language.t('footerHours') }}: {{ language.t('footerHoursValue') }}</li>
       </ul>
     </section>

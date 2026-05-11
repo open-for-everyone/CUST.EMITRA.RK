@@ -1,7 +1,7 @@
 record SignupRequest(string Name, string Email, string Password);
-record LoginRequest(string Email, string Password);
+record LoginRequest(string Email, string Password, string? MfaCode = null, string? MfaChallengeToken = null);
 record ChatRequest(string Message);
-record AuthResponse(string Token, string Name, string Email);
+record AuthResponse(string? Token, string? Name, string? Email, bool MfaRequired = false, string? MfaChallengeToken = null, string[]? AvailableMfaMethods = null);
 record UserProfileResponse(string Name, string Email, DateTime CreatedAtUtc);
 record ChatResponse(string Reply, DateTime CreatedAtUtc);
 record ChatHistoryItem(string Message, string Reply, DateTime CreatedAtUtc);
@@ -9,3 +9,8 @@ record ActivityItem(string Action, string? Metadata, DateTime CreatedAtUtc);
 record SocialProviderResponse(string Key, string DisplayName);
 record SocialProviderConfig(string Key, string DisplayName, string Scheme);
 record PagedResponse<T>(IReadOnlyList<T> Items, int Page, int PageSize, int TotalCount, int TotalPages);
+record PublicContactResponse(string Language, string Phone, string WhatsApp, string Email, string SupportNotice);
+record MfaCodeRequest(string Code);
+record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+record ForgotPasswordRequest(string Email);
+record ResetPasswordRequest(string Token, string NewPassword);
