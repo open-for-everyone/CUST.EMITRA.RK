@@ -28,6 +28,8 @@ const string ContactPhoneSettingKey = "contact.phone";
 const string ContactWhatsAppSettingKey = "contact.whatsapp";
 const string ContactEmailSettingKey = "contact.email";
 const string ContactSupportNoticeSettingKey = "contact.supportNotice";
+const string PreviousDefaultWhatsAppNumber = "+91 9982761929";
+const string CurrentDefaultWhatsAppNumber = "+91 96751 28075";
 const int UserAgentMaxLength = 120;
 
 builder.Services.AddOpenApi();
@@ -292,7 +294,7 @@ app.MapGet("/api/settings/public-contact", async (AppDbContext db, string? langu
     return Results.Ok(new PublicContactResponse(
         normalizedLanguage,
         Resolve(ContactPhoneSettingKey, "+91 9982761929"),
-        Resolve(ContactWhatsAppSettingKey, "+91 9982761929"),
+        Resolve(ContactWhatsAppSettingKey, CurrentDefaultWhatsAppNumber),
         Resolve(ContactEmailSettingKey, "support@rkemitra.in"),
         Resolve(ContactSupportNoticeSettingKey, "If this login was not performed by you, please reset your password and contact support immediately.")));
 });
@@ -1021,8 +1023,8 @@ static async Task SeedPublicSettingsAsync(AppDbContext db)
     {
         [("en", ContactPhoneSettingKey)] = "+91 9982761929",
         [("hi", ContactPhoneSettingKey)] = "+91 9982761929",
-        [("en", ContactWhatsAppSettingKey)] = "+91 9982761929",
-        [("hi", ContactWhatsAppSettingKey)] = "+91 9982761929",
+        [("en", ContactWhatsAppSettingKey)] = CurrentDefaultWhatsAppNumber,
+        [("hi", ContactWhatsAppSettingKey)] = CurrentDefaultWhatsAppNumber,
         [("en", ContactEmailSettingKey)] = "support@rkemitra.in",
         [("hi", ContactEmailSettingKey)] = "support@rkemitra.in",
         [("en", ContactSupportNoticeSettingKey)] = "If this login was not performed by you, please reset your password and contact support immediately.",
@@ -1035,8 +1037,14 @@ static async Task SeedPublicSettingsAsync(AppDbContext db)
         .ToListAsync();
     foreach (var ((language, key), value) in defaults)
     {
-        if (existing.Any(s => s.Language == language && s.Key == key))
+        var existingSetting = existing.FirstOrDefault(s => s.Language == language && s.Key == key);
+        if (existingSetting is not null)
         {
+            if (key == ContactWhatsAppSettingKey &&
+                string.Equals(existingSetting.Value, PreviousDefaultWhatsAppNumber, StringComparison.Ordinal))
+            {
+                existingSetting.Value = value;
+            }
             continue;
         }
 
@@ -1064,7 +1072,7 @@ static async Task<string?> ResolvePublicSettingValueAsync(AppDbContext db, strin
 
 static async Task<string> BuildWhatsAppUrlAsync(AppDbContext db, CancellationToken cancellationToken)
 {
-    const string fallbackNumber = "919982761929";
+    const string fallbackNumber = "919675128075";
     var rawNumber = await db.PublicSettings
         .Where(s => s.Key == ContactWhatsAppSettingKey && s.Language == "en")
         .Select(s => s.Value)
