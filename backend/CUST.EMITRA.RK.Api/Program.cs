@@ -786,11 +786,14 @@ app.MapPost("/api/auth/forgot-password", async (
     // Notify backend team with the reset token so they can relay it (email integration point).
     var frontendBase = httpContext.Request.Headers["Origin"].FirstOrDefault()
         ?? httpContext.Request.Scheme + "://" + httpContext.Request.Host;
+    // Sanitize frontendBase to prevent log injection before logging
+    var sanitizedBase = frontendBase.Replace('\r', '_').Replace('\n', '_');
     var resetUrl = $"{frontendBase}/reset-password?token={rawToken}";
-    logger.LogInformation("Password reset requested for user ID {UserId}. Reset URL: {ResetUrl}", user.Id, resetUrl);
+    logger.LogInformation("Password reset requested for user ID {UserId}. Reset URL: {ResetUrl}", user.Id, $"{sanitizedBase}/reset-password?token=[REDACTED]");
     await notifier.NotifyAsync("forgot-password", user.Id, $"Password reset URL: {resetUrl}", cancellationToken);
 
-    return Results.Ok(new { message = "If the email is registered, password reset instructions have been sent.", resetUrl });
+    // Do not expose the reset URL in the response to prevent token leakage through API observers.
+    return Results.Ok(new { message = "If the email is registered, password reset instructions have been sent." });
 });
 
 app.MapPost("/api/auth/reset-password", async (

@@ -49,7 +49,6 @@ export interface SecurityAlertResponse {
 
 export interface PasswordResetResponse {
   message: string;
-  resetUrl?: string;
 }
 
 export interface PagedResponse<T> {

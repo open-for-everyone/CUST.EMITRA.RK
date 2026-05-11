@@ -46,7 +46,7 @@ export class ResetPasswordComponent implements OnInit {
     }
 
     if (this.newPassword.length < 6) {
-      this.errorMessage.set('Password must be at least 6 characters.');
+      this.errorMessage.set(this.language.t('resetPasswordMinLength'));
       return;
     }
 
