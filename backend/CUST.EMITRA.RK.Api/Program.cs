@@ -208,12 +208,23 @@ if (app.Environment.IsDevelopment())
 
 // Trust forwarded headers from reverse proxies (Render, Railway, Fly.io, etc.) so that
 // UseHttpsRedirection can correctly detect whether the original request was already HTTPS.
+// Set TRUST_ALL_PROXY_HEADERS=true only when the app is deployed behind a trusted reverse proxy
+// (e.g., Render, Railway, Fly.io) that injects X-Forwarded-Proto. Do NOT set this in
+// environments where the app is directly internet-facing, as it allows IP spoofing.
+var trustAllProxyHeaders = bool.TryParse(
+    builder.Configuration["TRUST_ALL_PROXY_HEADERS"] ?? Environment.GetEnvironmentVariable("TRUST_ALL_PROXY_HEADERS"),
+    out var trustFlag) && trustFlag;
+
 var forwardedHeaderOptions = new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 };
-forwardedHeaderOptions.KnownIPNetworks.Clear();
-forwardedHeaderOptions.KnownProxies.Clear();
+if (trustAllProxyHeaders)
+{
+    forwardedHeaderOptions.KnownIPNetworks.Clear();
+    forwardedHeaderOptions.KnownProxies.Clear();
+}
+
 app.UseForwardedHeaders(forwardedHeaderOptions);
 
 app.UseHttpsRedirection();
