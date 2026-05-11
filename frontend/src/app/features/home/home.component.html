@@ -83,6 +83,92 @@
         <button class="btn" type="submit" [disabled]="changePwdLoading()">{{ language.t('changePasswordSubmit') }}</button>
       </form>
     </section>
+
+    <section class="card wide mfa-card">
+      <h2>{{ language.t('mfaSectionTitle') }}</h2>
+
+      @if (mfaSuccess()) {
+        <p class="success-message">{{ mfaSuccess() }}</p>
+      }
+      @if (mfaError()) {
+        <p class="auth-error">{{ mfaError() }}</p>
+      }
+
+      <p>
+        @if (auth.user()?.mfaEnabled) {
+          {{ language.t('mfaStatusEnabled') }}
+        } @else {
+          {{ language.t('mfaStatusDisabled') }}
+        }
+      </p>
+
+      @if (!auth.user()?.mfaEnabled) {
+        @if (!mfaSetupInfo()) {
+          <button class="btn ghost" type="button" [disabled]="mfaSetupLoading()" (click)="onMfaSetup()">
+            {{ mfaSetupLoading() ? '...' : language.t('mfaSetupBtn') }}
+          </button>
+        } @else {
+          <div class="mfa-setup">
+            <h3>{{ language.t('mfaSetupTitle') }}</h3>
+            <p>{{ language.t('mfaSetupInstruction') }}</p>
+
+            <div class="mfa-qr-block">
+              <img
+                class="mfa-qr"
+                [src]="'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + mfaSetupInfo()!.otpAuthUri"
+                alt="MFA QR code"
+                width="180"
+                height="180"
+              />
+            </div>
+
+            <p><strong>{{ language.t('mfaSecretLabel') }}</strong></p>
+            <code class="mfa-secret">{{ mfaSetupInfo()!.secret }}</code>
+
+            <details class="mfa-recovery">
+              <summary><strong>{{ language.t('mfaRecoveryCodesTitle') }}</strong></summary>
+              <p class="muted-text">{{ language.t('mfaRecoveryCodesNote') }}</p>
+              <ul class="recovery-list">
+                @for (code of mfaSetupInfo()!.recoveryCodes; track code) {
+                  <li><code>{{ code }}</code></li>
+                }
+              </ul>
+            </details>
+
+            <div class="form mfa-verify-form">
+              <input
+                [(ngModel)]="mfaCodeInput"
+                name="mfaCodeInput"
+                type="text"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                maxlength="6"
+                [placeholder]="language.t('mfaCodePlaceholder')"
+              />
+              <button class="btn" type="button" [disabled]="mfaOpLoading()" (click)="onMfaEnable()">
+                {{ mfaOpLoading() ? language.t('mfaEnabling') : language.t('mfaEnableBtn') }}
+              </button>
+            </div>
+          </div>
+        }
+      } @else {
+        <p class="muted-text">{{ language.t('mfaDisablePrompt') }}</p>
+        <div class="form mfa-verify-form">
+          <input
+            [(ngModel)]="mfaCodeInput"
+            name="mfaDisableCode"
+            type="text"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            maxlength="8"
+            [placeholder]="language.t('mfaCodePlaceholder')"
+          />
+          <button class="btn ghost" type="button" [disabled]="mfaOpLoading()" (click)="onMfaDisable()">
+            {{ mfaOpLoading() ? language.t('mfaDisabling') : language.t('mfaDisableBtn') }}
+          </button>
+        </div>
+      }
+    </section>
   }
 
   <app-services />

@@ -2,7 +2,7 @@ using System.Text.Json;
 
 class GoogleAiChatService(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<GoogleAiChatService> logger)
 {
-    public async Task<string> GenerateReplyAsync(string userMessage, string userName, CancellationToken cancellationToken)
+    public async Task<string> GenerateReplyAsync(string userMessage, string userName, string whatsAppUrl, CancellationToken cancellationToken)
     {
         // Accept either the .NET-style config name or the plain env var GEMINI_API_KEY.
         var apiKey = configuration["GoogleAi:ApiKey"]
@@ -11,7 +11,7 @@ class GoogleAiChatService(IHttpClientFactory httpClientFactory, IConfiguration c
         if (string.IsNullOrWhiteSpace(apiKey))
         {
             logger.LogWarning("Google AI key missing. Returning fallback response.");
-            return BuildFallbackResponse(userMessage, userName);
+            return BuildFallbackResponse(userMessage, userName, whatsAppUrl);
         }
 
         try
@@ -44,7 +44,7 @@ Services offered by RK Online Centre:
 7. Government Form Assistance – Help with online forms, uploads, and submission verification.
 
 Answer only questions related to these services or general citizen service guidance. Keep responses clear and concise.
-If the issue cannot be resolved through this chat, end your response with: 'If your issue isn't resolved, please connect with us on WhatsApp: https://wa.me/911415550101'
+If the issue cannot be resolved through this chat, end your response with: 'If your issue isn't resolved, please connect with us on WhatsApp: {whatsAppUrl}'
 
 User message: {safeUserMessage}"
                             }
@@ -63,7 +63,7 @@ User message: {safeUserMessage}"
             if (!response.IsSuccessStatusCode)
             {
                 logger.LogWarning("Google AI request failed with status code {StatusCode}", response.StatusCode);
-                return BuildFallbackResponse(userMessage, userName);
+                return BuildFallbackResponse(userMessage, userName, whatsAppUrl);
             }
 
             var jsonText = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -92,12 +92,12 @@ User message: {safeUserMessage}"
             logger.LogError(ex, "Google AI request failed unexpectedly");
         }
 
-        return BuildFallbackResponse(userMessage, userName);
+        return BuildFallbackResponse(userMessage, userName, whatsAppUrl);
     }
 
-    private static string BuildFallbackResponse(string message, string userName)
+    private static string BuildFallbackResponse(string message, string userName, string whatsAppUrl)
     {
-        return $"Hi {userName}, thanks for your message. We received: '{message}'. Our AI assistant is temporarily limited, but the backend team has been notified and will help shortly.\n\nIf your issue isn't resolved, please connect with us on WhatsApp: https://wa.me/911415550101";
+        return $"Hi {userName}, thanks for your message. We received: '{message}'. Our AI assistant is temporarily limited, but the backend team has been notified and will help shortly.\n\nIf your issue isn't resolved, please connect with us on WhatsApp: {whatsAppUrl}";
     }
 
     private static string SanitizeForPrompt(string input, int maxLength)

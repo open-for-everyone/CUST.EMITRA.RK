@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -205,6 +206,18 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+// Trust forwarded headers from reverse proxies (Render, Railway, Fly.io, etc.) so that
+// UseHttpsRedirection can correctly detect whether the original request was already HTTPS.
+var forwardedHeaderOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+};
+forwardedHeaderOptions.KnownIPNetworks.Clear();
+forwardedHeaderOptions.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeaderOptions);
+
+app.UseHttpsRedirection();
+
 app.UseCors("AllowFrontend");
 app.Use(async (context, next) =>
 {
@@ -223,7 +236,6 @@ app.Use(async (context, next) =>
 });
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseHttpsRedirection();
 
 var updates = new[]
 {
@@ -536,7 +548,7 @@ app.MapGet("/api/auth/me", [Authorize] async (ClaimsPrincipal principal, AppDbCo
     var user = await db.Users.FindAsync([userId.Value], cancellationToken);
     return user is null
         ? ApiResponses.Unauthorized("User profile not found.")
-        : Results.Ok(new UserProfileResponse(user.Name, user.Email, user.CreatedAtUtc));
+        : Results.Ok(new UserProfileResponse(user.Name, user.Email, user.CreatedAtUtc, user.MfaEnabled));
 });
 
 app.MapGet("/api/auth/security-alert", [Authorize] async (
@@ -862,7 +874,11 @@ app.MapPost("/api/chat", [Authorize] async (
         return ApiResponses.Unauthorized("User profile not found.");
     }
 
-    var responseText = await chatService.GenerateReplyAsync(request.Message.Trim(), user.Name, cancellationToken);
+    var responseText = await chatService.GenerateReplyAsync(
+        request.Message.Trim(),
+        user.Name,
+        await BuildWhatsAppUrlAsync(db, cancellationToken),
+        cancellationToken);
 
     db.ChatMessages.Add(new ChatMessage
     {
@@ -1033,6 +1049,24 @@ static async Task<string?> ResolvePublicSettingValueAsync(AppDbContext db, strin
         .Select(s => s.Value)
         .FirstOrDefaultAsync(cancellationToken);
     return value;
+}
+
+static async Task<string> BuildWhatsAppUrlAsync(AppDbContext db, CancellationToken cancellationToken)
+{
+    const string fallbackNumber = "919982761929";
+    var rawNumber = await db.PublicSettings
+        .Where(s => s.Key == ContactWhatsAppSettingKey && s.Language == "en")
+        .Select(s => s.Value)
+        .FirstOrDefaultAsync(cancellationToken);
+    var digits = string.IsNullOrWhiteSpace(rawNumber)
+        ? fallbackNumber
+        : new string(rawNumber.Where(char.IsDigit).ToArray());
+    if (string.IsNullOrWhiteSpace(digits))
+    {
+        digits = fallbackNumber;
+    }
+
+    return $"https://wa.me/{digits}";
 }
 
 static string BuildLoginMetadata(HttpContext httpContext)
