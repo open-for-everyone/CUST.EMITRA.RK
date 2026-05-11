@@ -140,9 +140,9 @@
                 [(ngModel)]="mfaCodeInput"
                 name="mfaCodeInput"
                 type="text"
-                inputmode="numeric"
+                inputmode="text"
                 autocomplete="one-time-code"
-                maxlength="6"
+                maxlength="10"
                 [placeholder]="language.t('mfaCodePlaceholder')"
               />
               <button class="btn" type="button" [disabled]="mfaOpLoading()" (click)="onMfaEnable()">
@@ -158,7 +158,7 @@
             [(ngModel)]="mfaCodeInput"
             name="mfaDisableCode"
             type="text"
-            inputmode="numeric"
+            inputmode="text"
             autocomplete="one-time-code"
             maxlength="10"
             [placeholder]="language.t('mfaCodePlaceholder')"
