@@ -44,6 +44,47 @@
     </section>
   }
 
+  @if (auth.user()) {
+    <section class="card wide change-password-card">
+      <h2>{{ language.t('changePasswordTitle') }}</h2>
+      @if (changePasswordSuccess()) {
+        <p class="success-message">{{ changePasswordSuccess() }}</p>
+      }
+      @if (changePasswordError()) {
+        <p class="auth-error">{{ changePasswordError() }}</p>
+      }
+      <form class="form" (ngSubmit)="onChangePassword()">
+        <input
+          [(ngModel)]="changePwdCurrent"
+          name="changePwdCurrent"
+          type="password"
+          autocomplete="current-password"
+          required
+          [placeholder]="language.t('changePasswordCurrent')"
+        />
+        <input
+          [(ngModel)]="changePwdNew"
+          name="changePwdNew"
+          type="password"
+          autocomplete="new-password"
+          minlength="6"
+          required
+          [placeholder]="language.t('changePasswordNew')"
+        />
+        <input
+          [(ngModel)]="changePwdConfirm"
+          name="changePwdConfirm"
+          type="password"
+          autocomplete="new-password"
+          minlength="6"
+          required
+          [placeholder]="language.t('changePasswordConfirm')"
+        />
+        <button class="btn" type="submit" [disabled]="changePwdLoading()">{{ language.t('changePasswordSubmit') }}</button>
+      </form>
+    </section>
+  }
+
   <app-services />
   <app-updates [updates]="updates()" [loading]="updatesLoading()" />
   <app-login-activity [isLoggedIn]="!!auth.user()" [loading]="activityLoading()" [items]="loginActivity()" />

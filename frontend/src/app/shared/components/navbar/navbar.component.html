@@ -87,6 +87,7 @@
             }
           }
           <button class="btn" [disabled]="loading">{{ language.t('navLogin') }}</button>
+          <a class="forgot-link" routerLink="/forgot-password" (click)="closePanelAndReset()">{{ language.t('forgotPasswordLink') }}</a>
         </form>
       } @else {
         <form (ngSubmit)="submitSignup()" class="form">

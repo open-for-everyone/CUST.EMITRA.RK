@@ -690,6 +690,147 @@ app.MapPost("/api/auth/mfa/disable", [Authorize] async (
     return Results.Ok(new { enabled = false });
 });
 
+app.MapPost("/api/auth/change-password", [Authorize] async (
+    ChangePasswordRequest request,
+    ClaimsPrincipal principal,
+    AppDbContext db,
+    CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(request.CurrentPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
+    {
+        return ApiResponses.Validation("Current password and new password are required.");
+    }
+
+    if (request.NewPassword.Length < 6)
+    {
+        return ApiResponses.Validation("New password must be at least 6 characters long.");
+    }
+
+    var userId = principal.GetUserId();
+    if (userId is null)
+    {
+        return ApiResponses.Unauthorized("Authentication is required.");
+    }
+
+    var user = await db.Users.FindAsync([userId.Value], cancellationToken);
+    if (user is null)
+    {
+        return ApiResponses.Unauthorized("User profile not found.");
+    }
+
+    if (!PasswordHasher.Verify(request.CurrentPassword, user.PasswordHash))
+    {
+        return ApiResponses.Unauthorized("Current password is incorrect.");
+    }
+
+    user.PasswordHash = PasswordHasher.Hash(request.NewPassword);
+    db.ActivityLogs.Add(new ActivityLog
+    {
+        UserId = user.Id,
+        Action = "password-changed",
+        Metadata = "User changed their password."
+    });
+    await db.SaveChangesAsync(cancellationToken);
+    return Results.Ok(new { message = "Password changed successfully." });
+});
+
+app.MapPost("/api/auth/forgot-password", async (
+    ForgotPasswordRequest request,
+    AppDbContext db,
+    BackendTeamNotifier notifier,
+    ILoggerFactory loggerFactory,
+    HttpContext httpContext,
+    CancellationToken cancellationToken) =>
+{
+    var logger = loggerFactory.CreateLogger("Auth");
+
+    if (string.IsNullOrWhiteSpace(request.Email))
+    {
+        return ApiResponses.Validation("Email is required.");
+    }
+
+    var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+
+    // Always return success to prevent email enumeration.
+    var user = await db.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail, cancellationToken);
+    if (user is null)
+    {
+        return Results.Ok(new { message = "If the email is registered, password reset instructions have been sent." });
+    }
+
+    // Expire any previous unused tokens for this user.
+    var oldTokens = await db.PasswordResetTokens
+        .Where(t => t.UserId == user.Id && !t.Used && t.ExpiresAtUtc > DateTime.UtcNow)
+        .ToListAsync(cancellationToken);
+    foreach (var old in oldTokens)
+    {
+        old.Used = true;
+    }
+
+    var rawToken = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
+    var tokenHash = MfaSecurity.HashChallengeToken(rawToken);
+    db.PasswordResetTokens.Add(new PasswordResetToken
+    {
+        UserId = user.Id,
+        TokenHash = tokenHash,
+        ExpiresAtUtc = DateTime.UtcNow.AddHours(1)
+    });
+    db.ActivityLogs.Add(new ActivityLog
+    {
+        UserId = user.Id,
+        Action = "forgot-password",
+        Metadata = $"Password reset requested from IP {httpContext.Connection.RemoteIpAddress}"
+    });
+    await db.SaveChangesAsync(cancellationToken);
+
+    // Notify backend team with the reset token so they can relay it (email integration point).
+    var frontendBase = httpContext.Request.Headers["Origin"].FirstOrDefault()
+        ?? httpContext.Request.Scheme + "://" + httpContext.Request.Host;
+    var resetUrl = $"{frontendBase}/reset-password?token={rawToken}";
+    logger.LogInformation("Password reset requested for user ID {UserId}. Reset URL: {ResetUrl}", user.Id, resetUrl);
+    await notifier.NotifyAsync("forgot-password", user.Id, $"Password reset URL: {resetUrl}", cancellationToken);
+
+    return Results.Ok(new { message = "If the email is registered, password reset instructions have been sent.", resetUrl });
+});
+
+app.MapPost("/api/auth/reset-password", async (
+    ResetPasswordRequest request,
+    AppDbContext db,
+    CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Token))
+    {
+        return ApiResponses.Validation("Reset token is required.");
+    }
+
+    if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 6)
+    {
+        return ApiResponses.Validation("New password must be at least 6 characters long.");
+    }
+
+    var tokenHash = MfaSecurity.HashChallengeToken(request.Token);
+    var resetToken = await db.PasswordResetTokens
+        .Include(t => t.User)
+        .Where(t => t.TokenHash == tokenHash && !t.Used && t.ExpiresAtUtc > DateTime.UtcNow)
+        .FirstOrDefaultAsync(cancellationToken);
+
+    if (resetToken is null || resetToken.User is null)
+    {
+        return ApiResponses.Validation("The reset link is invalid or has expired. Please request a new one.");
+    }
+
+    resetToken.User.PasswordHash = PasswordHasher.Hash(request.NewPassword);
+    resetToken.Used = true;
+    db.ActivityLogs.Add(new ActivityLog
+    {
+        UserId = resetToken.UserId,
+        Action = "password-reset",
+        Metadata = "Password was reset using a reset token."
+    });
+    await db.SaveChangesAsync(cancellationToken);
+    return Results.Ok(new { message = "Password has been reset successfully. You can now log in." });
+});
+
 app.MapPost("/api/chat", [Authorize] async (
     ChatRequest request,
     ClaimsPrincipal principal,

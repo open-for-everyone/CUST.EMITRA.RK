@@ -50,6 +50,17 @@ class MfaLoginChallenge
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
 
+class PasswordResetToken
+{
+    public int Id { get; set; }
+    public int UserId { get; set; }
+    public AppUser? User { get; set; }
+    public string TokenHash { get; set; } = string.Empty;
+    public DateTime ExpiresAtUtc { get; set; }
+    public bool Used { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
 class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<AppUser> Users => Set<AppUser>();
@@ -57,6 +68,7 @@ class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
     public DbSet<PublicSetting> PublicSettings => Set<PublicSetting>();
     public DbSet<MfaLoginChallenge> MfaLoginChallenges => Set<MfaLoginChallenge>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -94,5 +106,17 @@ class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 
         modelBuilder.Entity<MfaLoginChallenge>()
             .HasIndex(c => c.ExpiresAtUtc);
+
+        modelBuilder.Entity<PasswordResetToken>()
+            .HasOne(r => r.User)
+            .WithMany()
+            .HasForeignKey(r => r.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<PasswordResetToken>()
+            .HasIndex(r => new { r.UserId, r.Used });
+
+        modelBuilder.Entity<PasswordResetToken>()
+            .HasIndex(r => r.ExpiresAtUtc);
     }
 }

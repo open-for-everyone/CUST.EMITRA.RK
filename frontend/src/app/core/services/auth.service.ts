@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { catchError, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
 import { ApiService } from './api.service';
-import { AuthResponse, SecurityAlertResponse, SocialProvider, UserProfile } from '../models/api.models';
+import { AuthResponse, PasswordResetResponse, SecurityAlertResponse, SocialProvider, UserProfile } from '../models/api.models';
 
 const STORAGE_KEY = 'emitra.auth.token';
 
@@ -122,6 +122,25 @@ export class AuthService {
 
     return this.api.get<SecurityAlertResponse>(`/api/auth/security-alert?language=${encodeURIComponent(language)}`, token).pipe(
       catchError(() => of({ message: '' }))
+    );
+  }
+
+  changePassword(currentPassword: string, newPassword: string): Observable<{ message: string }> {
+    const token = this.getToken();
+    return this.api.post<{ message: string }>('/api/auth/change-password', { currentPassword, newPassword }, token).pipe(
+      catchError((error) => throwError(() => error))
+    );
+  }
+
+  forgotPassword(email: string): Observable<PasswordResetResponse> {
+    return this.api.post<PasswordResetResponse>('/api/auth/forgot-password', { email }).pipe(
+      catchError((error) => throwError(() => error))
+    );
+  }
+
+  resetPassword(token: string, newPassword: string): Observable<{ message: string }> {
+    return this.api.post<{ message: string }>('/api/auth/reset-password', { token, newPassword }).pipe(
+      catchError((error) => throwError(() => error))
     );
   }
 

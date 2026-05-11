@@ -11,3 +11,6 @@ record SocialProviderConfig(string Key, string DisplayName, string Scheme);
 record PagedResponse<T>(IReadOnlyList<T> Items, int Page, int PageSize, int TotalCount, int TotalPages);
 record PublicContactResponse(string Language, string Phone, string WhatsApp, string Email, string SupportNotice);
 record MfaCodeRequest(string Code);
+record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+record ForgotPasswordRequest(string Email);
+record ResetPasswordRequest(string Token, string NewPassword);

@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
@@ -20,7 +21,7 @@ const LOGIN_ACTIONS = new Set(['login', 'signin', 'signup', 'register', 'logout'
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [RouterLink, NavbarComponent, ServicesComponent, UpdatesComponent, ChatComponent, LoginActivityComponent, ActionActivityComponent, UpdateAnnouncementComponent],
+  imports: [RouterLink, FormsModule, NavbarComponent, ServicesComponent, UpdatesComponent, ChatComponent, LoginActivityComponent, ActionActivityComponent, UpdateAnnouncementComponent],
   templateUrl: './home.component.html'
 })
 export class HomeComponent implements OnInit {
@@ -41,6 +42,12 @@ export class HomeComponent implements OnInit {
   readonly chatOpen = signal(false);
   readonly authError = signal('');
   readonly securityAlert = signal('');
+  readonly changePasswordError = signal('');
+  readonly changePasswordSuccess = signal('');
+  readonly changePwdLoading = signal(false);
+  changePwdCurrent = '';
+  changePwdNew = '';
+  changePwdConfirm = '';
   readonly language = inject(LanguageService);
 
   readonly loginActivity = computed(() =>
@@ -108,6 +115,8 @@ export class HomeComponent implements OnInit {
     this.auth.logout();
     this.authError.set('');
     this.securityAlert.set('');
+    this.changePasswordError.set('');
+    this.changePasswordSuccess.set('');
     this.chatMessages.set([]);
     this.activity.set([]);
     this.chatOpen.set(false);
@@ -119,6 +128,31 @@ export class HomeComponent implements OnInit {
 
   clearAuthError(): void {
     this.authError.set('');
+  }
+
+  onChangePassword(): void {
+    this.changePasswordError.set('');
+    this.changePasswordSuccess.set('');
+
+    if (this.changePwdNew !== this.changePwdConfirm) {
+      this.changePasswordError.set(this.language.t('changePasswordMismatch'));
+      return;
+    }
+
+    this.changePwdLoading.set(true);
+    this.auth.changePassword(this.changePwdCurrent, this.changePwdNew).subscribe({
+      next: () => {
+        this.changePasswordSuccess.set(this.language.t('changePasswordSuccess'));
+        this.changePwdCurrent = '';
+        this.changePwdNew = '';
+        this.changePwdConfirm = '';
+        this.changePwdLoading.set(false);
+      },
+      error: () => {
+        this.changePasswordError.set(this.language.t('changePasswordFailed'));
+        this.changePwdLoading.set(false);
+      }
+    });
   }
 
   onSendChat(message: string): void {

@@ -483,6 +483,41 @@ textarea {
   font-weight: 500;
 }
 
+.success-message {
+  margin: 0;
+  color: #15803d;
+  font-weight: 500;
+}
+
+[data-theme="dark"] .success-message {
+  color: #4ade80;
+}
+
+.forgot-link {
+  color: var(--accent);
+  font-size: 0.9rem;
+  text-decoration: none;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
+}
+
+.change-password-card,
+.forgot-password-card,
+.reset-password-card {
+  display: grid;
+  gap: 12px;
+}
+
+.change-password-card .form,
+.forgot-password-card .form,
+.reset-password-card .form {
+  max-width: 440px;
+}
+
 .contact-intro {
   display: grid;
   gap: 8px;
