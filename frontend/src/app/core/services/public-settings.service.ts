@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Observable, catchError, of } from 'rxjs';
 import { ApiService } from './api.service';
 import { PublicContact } from '../models/api.models';
+import { DEFAULT_PUBLIC_CONTACT } from '../constants/public-contact.defaults';
 
 @Injectable({ providedIn: 'root' })
 export class PublicSettingsService {
@@ -10,13 +11,7 @@ export class PublicSettingsService {
   getPublicContact(language: string): Observable<PublicContact> {
     const normalized = language === 'hi' ? 'hi' : 'en';
     return this.api.get<PublicContact>(`/api/settings/public-contact?language=${normalized}`).pipe(
-      catchError(() => of({
-        language: normalized,
-        phone: '+91 9982761929',
-        whatsapp: '+91 9982761929',
-        email: 'support@rkemitra.in',
-        supportNotice: 'If this login was not performed by you, please reset your password and contact support immediately.'
-      }))
+      catchError(() => of({ ...DEFAULT_PUBLIC_CONTACT, language: normalized }))
     );
   }
 }

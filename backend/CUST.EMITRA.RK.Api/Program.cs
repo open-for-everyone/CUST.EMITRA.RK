@@ -27,6 +27,7 @@ const string ContactPhoneSettingKey = "contact.phone";
 const string ContactWhatsAppSettingKey = "contact.whatsapp";
 const string ContactEmailSettingKey = "contact.email";
 const string ContactSupportNoticeSettingKey = "contact.supportNotice";
+const int UserAgentMaxLength = 120;
 
 builder.Services.AddOpenApi();
 builder.Services.AddCors(options =>
@@ -437,7 +438,7 @@ app.MapPost("/api/auth/signup", async (
     logger.LogInformation("New user signup completed for user ID {UserId}", user.Id);
 
     var token = JwtTokenFactory.Create(user, jwtIssuer, jwtAudience, jwtSigningKey);
-    return Results.Ok(new AuthResponse(token, user.Name, user.Email));
+    return Results.Ok(new AuthResponse(Token: token, Name: user.Name, Email: user.Email));
 });
 
 app.MapPost("/api/auth/login", async (
@@ -521,7 +522,7 @@ app.MapPost("/api/auth/login", async (
     await notifier.NotifyAsync("login", user.Id, $"User logged in with {loginMetadata}", cancellationToken);
 
     var token = JwtTokenFactory.Create(user, jwtIssuer, jwtAudience, jwtSigningKey);
-    return Results.Ok(new AuthResponse(token, user.Name, user.Email));
+    return Results.Ok(new AuthResponse(Token: token, Name: user.Name, Email: user.Email));
 });
 
 app.MapGet("/api/auth/me", [Authorize] async (ClaimsPrincipal principal, AppDbContext db, CancellationToken cancellationToken) =>
@@ -900,7 +901,13 @@ static string BuildLoginMetadata(HttpContext httpContext)
     }
 
     var userAgent = httpContext.Request.Headers.UserAgent.ToString();
-    var device = string.IsNullOrWhiteSpace(userAgent) ? "unknown device" : userAgent[..Math.Min(userAgent.Length, 120)];
+    var device = "unknown device";
+    if (!string.IsNullOrWhiteSpace(userAgent))
+    {
+        device = userAgent.Length > UserAgentMaxLength
+            ? $"{userAgent[..UserAgentMaxLength]}..."
+            : userAgent;
+    }
     var location = httpContext.Request.Headers["X-Geo-Country"].FirstOrDefault();
     if (string.IsNullOrWhiteSpace(location))
     {

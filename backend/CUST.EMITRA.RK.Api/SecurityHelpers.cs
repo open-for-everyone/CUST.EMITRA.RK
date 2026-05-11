@@ -109,6 +109,8 @@ static class SocialReturnUrlResolver
 
 static class MfaSecurity
 {
+    private const int RecoveryCodeBytes = 5;
+
     public static string GenerateAuthenticatorSecret()
     {
         return Convert.ToBase64String(RandomNumberGenerator.GetBytes(20));
@@ -119,7 +121,7 @@ static class MfaSecurity
         var codes = new List<string>(count);
         for (var i = 0; i < count; i++)
         {
-            var bytes = RandomNumberGenerator.GetBytes(5);
+            var bytes = RandomNumberGenerator.GetBytes(RecoveryCodeBytes);
             codes.Add(Convert.ToHexString(bytes));
         }
 

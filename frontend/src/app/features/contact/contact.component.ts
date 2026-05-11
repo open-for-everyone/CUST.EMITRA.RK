@@ -9,6 +9,7 @@ import { GeoSearchService, GeoResult } from '../../core/services/geo-search.serv
 import { PublicContact, SocialProvider } from '../../core/models/api.models';
 import { LanguageService } from '../../core/services/language.service';
 import { PublicSettingsService } from '../../core/services/public-settings.service';
+import { DEFAULT_PUBLIC_CONTACT } from '../../core/constants/public-contact.defaults';
 
 @Component({
   selector: 'app-contact',
@@ -30,13 +31,7 @@ export class ContactComponent implements OnInit, OnDestroy {
   readonly locationAccuracy = signal<number | null>(null);
   readonly searchResults = signal<GeoResult[]>([]);
   readonly searchOpen = signal(false);
-  readonly contactInfo = signal<PublicContact>({
-    language: 'en',
-    phone: '+91 9982761929',
-    whatsapp: '+91 9982761929',
-    email: 'support@rkemitra.in',
-    supportNotice: 'If this login was not performed by you, please reset your password and contact support immediately.'
-  });
+  readonly contactInfo = signal<PublicContact>(DEFAULT_PUBLIC_CONTACT);
 
   private readonly searchSubject = new Subject<string>();
   private readonly searchSub = this.searchSubject.pipe(
@@ -109,7 +104,7 @@ export class ContactComponent implements OnInit, OnDestroy {
     this.auth.login(email, password, mfaCode).subscribe({
       next: () => {
         if (this.auth.mfaRequired()) {
-          this.authError.set('MFA verification is required to complete login.');
+          this.authError.set(this.language.t('mfaCodePrompt'));
         }
       },
       error: () => this.authError.set(this.language.t('authLoginFailed'))

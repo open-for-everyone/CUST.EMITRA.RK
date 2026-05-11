@@ -86,7 +86,7 @@ export class HomeComponent implements OnInit {
     this.auth.login(email, password, mfaCode).subscribe({
       next: () => {
         if (this.auth.mfaRequired()) {
-          this.authError.set('MFA verification is required to complete login.');
+          this.authError.set(this.language.t('mfaCodePrompt'));
           return;
         }
 
