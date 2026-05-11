@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
@@ -6,8 +6,9 @@ import { finalize } from 'rxjs';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
 import { AuthService } from '../../core/services/auth.service';
 import { GeoSearchService, GeoResult } from '../../core/services/geo-search.service';
-import { SocialProvider } from '../../core/models/api.models';
+import { PublicContact, SocialProvider } from '../../core/models/api.models';
 import { LanguageService } from '../../core/services/language.service';
+import { PublicSettingsService } from '../../core/services/public-settings.service';
 
 @Component({
   selector: 'app-contact',
@@ -21,6 +22,7 @@ export class ContactComponent implements OnInit, OnDestroy {
   readonly language = inject(LanguageService);
   private readonly sanitizer = inject(DomSanitizer);
   private readonly geoSearch = inject(GeoSearchService);
+  private readonly publicSettings = inject(PublicSettingsService);
   readonly providers = signal<SocialProvider[]>([]);
   readonly providersLoading = signal(false);
   readonly authError = signal('');
@@ -28,6 +30,13 @@ export class ContactComponent implements OnInit, OnDestroy {
   readonly locationAccuracy = signal<number | null>(null);
   readonly searchResults = signal<GeoResult[]>([]);
   readonly searchOpen = signal(false);
+  readonly contactInfo = signal<PublicContact>({
+    language: 'en',
+    phone: '+91 9982761929',
+    whatsapp: '+91 9982761929',
+    email: 'support@rkemitra.in',
+    supportNotice: 'If this login was not performed by you, please reset your password and contact support immediately.'
+  });
 
   private readonly searchSubject = new Subject<string>();
   private readonly searchSub = this.searchSubject.pipe(
@@ -74,11 +83,17 @@ export class ContactComponent implements OnInit, OnDestroy {
     return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${lat}%2C${lng}%3B${this.centerLat}%2C${this.centerLng}`;
   });
 
-  readonly contactDetails = [
-    { label: 'Phone', value: '+91-141-555-0199' },
-    { label: 'Email', value: 'support@rkemitra.in' },
-    { label: 'WhatsApp', value: '+91-141-555-0101' }
-  ];
+  readonly contactDetails = computed(() => [
+    { label: 'Phone', value: this.contactInfo().phone },
+    { label: 'Email', value: this.contactInfo().email },
+    { label: 'WhatsApp', value: this.contactInfo().whatsapp }
+  ]);
+  private readonly contactByLanguageEffect = effect(() => {
+    const language = this.language.language();
+    this.publicSettings.getPublicContact(language).subscribe((contact) => {
+      this.contactInfo.set(contact);
+    });
+  });
 
   ngOnInit(): void {
     this.loadProviders();
@@ -89,9 +104,14 @@ export class ContactComponent implements OnInit, OnDestroy {
     this.searchSub.unsubscribe();
   }
 
-  onLogin(email: string, password: string): void {
+  onLogin(email: string, password: string, mfaCode = ''): void {
     this.authError.set('');
-    this.auth.login(email, password).subscribe({
+    this.auth.login(email, password, mfaCode).subscribe({
+      next: () => {
+        if (this.auth.mfaRequired()) {
+          this.authError.set('MFA verification is required to complete login.');
+        }
+      },
       error: () => this.authError.set(this.language.t('authLoginFailed'))
     });
   }
@@ -180,13 +200,14 @@ export class ContactComponent implements OnInit, OnDestroy {
 
   getWhatsAppLink(): string {
     const text = this.buildMessageBody();
-    return `https://wa.me/911415550101?text=${encodeURIComponent(text)}`;
+    const whatsappNumber = this.contactInfo().whatsapp.replace(/[^\d]/g, '');
+    return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(text)}`;
   }
 
   getDirectEmailLink(): string {
     const subject = encodeURIComponent('Support request - RK Online Centre');
     const body = encodeURIComponent(this.buildEmailBody());
-    return `mailto:support@rkemitra.in?subject=${subject}&body=${body}`;
+    return `mailto:${encodeURIComponent(this.contactInfo().email)}?subject=${subject}&body=${body}`;
   }
 
   private sanitizeField(value: string): string {

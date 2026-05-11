@@ -177,13 +177,14 @@ input {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 10px 12px;
-  background: #fff;
+  background: var(--surface-soft);
+  color: var(--text);
 }
 
 .chat-row.user .chat-bubble {
-  background: #4f46e5;
+  background: var(--accent);
   color: #fff;
-  border-color: #4f46e5;
+  border-color: var(--accent);
 }
 
 .chip {
@@ -267,6 +268,8 @@ input {
 
 .chat-widget .card {
   margin: 0;
+  background: var(--surface);
+  border-color: var(--border);
 }
 
 .page {

@@ -5,9 +5,11 @@
   [authError]="authError()"
   (logout)="onLogout()"
   (clearAuthError)="clearAuthError()"
-  (login)="onLogin($event.email, $event.password)"
+  (login)="onLogin($event.email, $event.password, $event.mfaCode ?? '')"
   (signup)="onSignup($event.name, $event.email, $event.password)"
   (socialLogin)="onSocialLogin($event)"
+  [mfaRequired]="auth.mfaRequired()"
+  [availableMfaMethods]="auth.availableMfaMethods()"
 />
 
 <app-update-announcement [updates]="updates()" />
@@ -35,6 +37,12 @@
       </div>
     </div>
   </section>
+
+  @if (securityAlert()) {
+    <section class="card wide auth-error-card">
+      <p>{{ securityAlert() }}</p>
+    </section>
+  }
 
   <app-services />
   <app-updates [updates]="updates()" [loading]="updatesLoading()" />

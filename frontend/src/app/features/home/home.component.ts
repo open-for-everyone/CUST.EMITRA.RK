@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { NavbarComponent } from '../../shared/components/navbar/navbar.component';
@@ -40,6 +40,7 @@ export class HomeComponent implements OnInit {
   readonly activityLoading = signal(false);
   readonly chatOpen = signal(false);
   readonly authError = signal('');
+  readonly securityAlert = signal('');
   readonly language = inject(LanguageService);
 
   readonly loginActivity = computed(() =>
@@ -49,6 +50,17 @@ export class HomeComponent implements OnInit {
   readonly actionActivity = computed(() =>
     this.activity().filter((i) => !LOGIN_ACTIONS.has(i.action.toLowerCase()))
   );
+  private readonly securityAlertLanguageEffect = effect(() => {
+    const language = this.language.language();
+    if (!this.auth.user()) {
+      this.securityAlert.set('');
+      return;
+    }
+
+    this.auth.getSecurityAlert(language).subscribe((payload) => {
+      this.securityAlert.set(payload.message || '');
+    });
+  });
 
   readonly isBusy = computed(
     () =>
@@ -69,10 +81,17 @@ export class HomeComponent implements OnInit {
     });
   }
 
-  onLogin(email: string, password: string): void {
+  onLogin(email: string, password: string, mfaCode = ''): void {
     this.authError.set('');
-    this.auth.login(email, password).subscribe({
-      next: () => this.loadAuthorizedData(),
+    this.auth.login(email, password, mfaCode).subscribe({
+      next: () => {
+        if (this.auth.mfaRequired()) {
+          this.authError.set('MFA verification is required to complete login.');
+          return;
+        }
+
+        this.loadAuthorizedData();
+      },
       error: () => this.authError.set(this.language.t('authLoginFailed'))
     });
   }
@@ -88,6 +107,7 @@ export class HomeComponent implements OnInit {
   onLogout(): void {
     this.auth.logout();
     this.authError.set('');
+    this.securityAlert.set('');
     this.chatMessages.set([]);
     this.activity.set([]);
     this.chatOpen.set(false);
@@ -150,6 +170,7 @@ export class HomeComponent implements OnInit {
   private loadAuthorizedData(): void {
     this.loadChatHistory();
     this.loadActivity();
+    this.loadSecurityAlert();
   }
 
   private loadChatHistory(): void {
@@ -184,6 +205,13 @@ export class HomeComponent implements OnInit {
         next: (items) => this.activity.set(items),
         error: () => this.activity.set([])
       });
+  }
+
+  private loadSecurityAlert(): void {
+    const language = this.language.language();
+    this.auth.getSecurityAlert(language).subscribe((payload) => {
+      this.securityAlert.set(payload.message || '');
+    });
   }
 
   private mapHistory(items: ChatHistoryItem[]): ChatMessageVm[] {

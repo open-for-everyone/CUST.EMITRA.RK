@@ -5,9 +5,11 @@
   [authError]="authError()"
   (logout)="onLogout()"
   (clearAuthError)="clearAuthError()"
-  (login)="onLogin($event.email, $event.password)"
+  (login)="onLogin($event.email, $event.password, $event.mfaCode ?? '')"
   (signup)="onSignup($event.name, $event.email, $event.password)"
   (socialLogin)="onSocialLogin($event)"
+  [mfaRequired]="auth.mfaRequired()"
+  [availableMfaMethods]="auth.availableMfaMethods()"
 />
 
 @if (isBusy()) {
@@ -114,7 +116,7 @@
             placeholder="Message*"
           ></textarea>
           <p class="contact-note">
-            By contacting us, your details are used to respond for RK Online Centre support.
+            {{ contactInfo().supportNotice }}
           </p>
           <div class="contact-form-actions">
             <button class="btn whatsapp-btn" type="submit">📲 Send via WhatsApp</button>
@@ -126,12 +128,12 @@
   </section>
 
   <section class="card">
-    <h3>Support Details</h3>
-    <ul>
-      @for (item of contactDetails; track item.label) {
-        <li><strong>{{ item.label }}:</strong> {{ item.value }}</li>
-      }
-    </ul>
+      <h3>Support Details</h3>
+      <ul>
+        @for (item of contactDetails(); track item.label) {
+          <li><strong>{{ item.label }}:</strong> {{ item.value }}</li>
+        }
+      </ul>
   </section>
 
   <section class="card">

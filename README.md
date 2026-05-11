@@ -2,7 +2,7 @@
 
 Modern, mobile-ready eMitra website for **RK** — rebuilt with **Angular 20 (standalone architecture)** on the frontend and **.NET 10** on the backend.
 
-Features: component-based Angular UI, latest updates from API, Google Gemini AI chatbot, JWT-secured accounts, activity tracking, and social login (Google/Facebook/LinkedIn).
+Features: component-based Angular UI, latest updates from API, Google Gemini AI chatbot, JWT-secured accounts, activity tracking with device/location metadata, optional MFA (authenticator + recovery codes), and social login (Google/Facebook/LinkedIn).
 
 ---
 
@@ -131,6 +131,11 @@ Endpoints exposed:
 - `POST /api/auth/signup`
 - `POST /api/auth/login`
 - `GET  /api/auth/me`
+- `GET  /api/auth/security-alert?language=en|hi`
+- `GET  /api/auth/mfa/setup`
+- `POST /api/auth/mfa/enable`
+- `POST /api/auth/mfa/disable`
+- `GET  /api/settings/public-contact?language=en|hi`
 - `POST /api/chat`
 - `GET  /api/chat/history?page=1&pageSize=20`
 - `GET  /api/activity?page=1&pageSize=30`
