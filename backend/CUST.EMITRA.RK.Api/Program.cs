@@ -1072,7 +1072,7 @@ static async Task<string?> ResolvePublicSettingValueAsync(AppDbContext db, strin
 
 static async Task<string> BuildWhatsAppUrlAsync(AppDbContext db, CancellationToken cancellationToken)
 {
-    const string fallbackNumber = "919675128075";
+    var fallbackNumber = new string(CurrentDefaultWhatsAppNumber.Where(char.IsDigit).ToArray());
     var rawNumber = await db.PublicSettings
         .Where(s => s.Key == ContactWhatsAppSettingKey && s.Language == "en")
         .Select(s => s.Value)
