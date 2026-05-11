@@ -119,7 +119,7 @@
             {{ contactInfo().supportNotice }}
           </p>
           <div class="contact-form-actions">
-            <button class="btn whatsapp-btn" type="submit">📲 Send via WhatsApp</button>
+            <button class="btn whatsapp-btn" type="button" (click)="sendViaWhatsApp()">📲 Send via WhatsApp</button>
             <a class="direct-email" [href]="getDirectEmailLink()">Email directly</a>
           </div>
         </form>
@@ -140,7 +140,8 @@
     <h3>Visit Centre</h3>
     <ul>
       <li><strong>Centre Name:</strong> RK Online Centre</li>
-      <li><strong>Address:</strong> Vaishali Nagar, Jaipur, Rajasthan</li>
+      <li><strong>Owner / Contact:</strong> Ramkumar</li>
+      <li><strong>Address:</strong> Shamsabad</li>
       <li><strong>Business Days:</strong> Monday to Saturday</li>
       <li><strong>Business Hours:</strong> 9:00 AM - 7:00 PM</li>
     </ul>

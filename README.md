@@ -97,6 +97,7 @@ backend/CUST.EMITRA.RK.Api/
 | `Authentication__LinkedIn__ClientId` | LinkedIn client id for social login | *(none)* |
 | `Authentication__LinkedIn__ClientSecret` | LinkedIn client secret for social login | *(none)* |
 | `PORT` | Port the API listens on (set automatically by Render) | `10000` |
+| `TRUST_ALL_PROXY_HEADERS` | Set to `true` when deployed behind a trusted reverse proxy (Render, Railway, Fly.io) so that `X-Forwarded-Proto` is respected and HTTPS redirects work correctly. **Do not set if the app is directly internet-facing.** | `false` |
 
 > **MongoDB support:** Set `ConnectionStrings__DefaultConnection` to a MongoDB URI (for example `mongodb+srv://.../emitra`) to persist data in MongoDB. If the value is not a MongoDB URI, the backend uses SQLite.
 

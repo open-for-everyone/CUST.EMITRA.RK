@@ -11,6 +11,13 @@ export interface UserProfile {
   name: string;
   email: string;
   createdAtUtc: string;
+  mfaEnabled: boolean;
+}
+
+export interface MfaSetupInfo {
+  secret: string;
+  otpAuthUri: string;
+  recoveryCodes: string[];
 }
 
 export interface ChatResponse {

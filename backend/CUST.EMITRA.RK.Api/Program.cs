@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -27,6 +28,8 @@ const string ContactPhoneSettingKey = "contact.phone";
 const string ContactWhatsAppSettingKey = "contact.whatsapp";
 const string ContactEmailSettingKey = "contact.email";
 const string ContactSupportNoticeSettingKey = "contact.supportNotice";
+const string PreviousDefaultWhatsAppNumber = "+91 9982761929";
+const string CurrentDefaultWhatsAppNumber = "+91 96751 28075";
 const int UserAgentMaxLength = 120;
 
 builder.Services.AddOpenApi();
@@ -205,6 +208,29 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+// Trust forwarded headers from reverse proxies (Render, Railway, Fly.io, etc.) so that
+// UseHttpsRedirection can correctly detect whether the original request was already HTTPS.
+// Set TRUST_ALL_PROXY_HEADERS=true only when the app is deployed behind a trusted reverse proxy
+// (e.g., Render, Railway, Fly.io) that injects X-Forwarded-Proto. Do NOT set this in
+// environments where the app is directly internet-facing, as it allows IP spoofing.
+var trustAllProxyHeaders = bool.TryParse(
+    builder.Configuration["TRUST_ALL_PROXY_HEADERS"] ?? Environment.GetEnvironmentVariable("TRUST_ALL_PROXY_HEADERS"),
+    out var trustFlag) && trustFlag;
+
+var forwardedHeaderOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+};
+if (trustAllProxyHeaders)
+{
+    forwardedHeaderOptions.KnownIPNetworks.Clear();
+    forwardedHeaderOptions.KnownProxies.Clear();
+}
+
+app.UseForwardedHeaders(forwardedHeaderOptions);
+
+app.UseHttpsRedirection();
+
 app.UseCors("AllowFrontend");
 app.Use(async (context, next) =>
 {
@@ -223,7 +249,6 @@ app.Use(async (context, next) =>
 });
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseHttpsRedirection();
 
 var updates = new[]
 {
@@ -269,7 +294,7 @@ app.MapGet("/api/settings/public-contact", async (AppDbContext db, string? langu
     return Results.Ok(new PublicContactResponse(
         normalizedLanguage,
         Resolve(ContactPhoneSettingKey, "+91 9982761929"),
-        Resolve(ContactWhatsAppSettingKey, "+91 9982761929"),
+        Resolve(ContactWhatsAppSettingKey, CurrentDefaultWhatsAppNumber),
         Resolve(ContactEmailSettingKey, "support@rkemitra.in"),
         Resolve(ContactSupportNoticeSettingKey, "If this login was not performed by you, please reset your password and contact support immediately.")));
 });
@@ -536,7 +561,7 @@ app.MapGet("/api/auth/me", [Authorize] async (ClaimsPrincipal principal, AppDbCo
     var user = await db.Users.FindAsync([userId.Value], cancellationToken);
     return user is null
         ? ApiResponses.Unauthorized("User profile not found.")
-        : Results.Ok(new UserProfileResponse(user.Name, user.Email, user.CreatedAtUtc));
+        : Results.Ok(new UserProfileResponse(user.Name, user.Email, user.CreatedAtUtc, user.MfaEnabled));
 });
 
 app.MapGet("/api/auth/security-alert", [Authorize] async (
@@ -862,7 +887,11 @@ app.MapPost("/api/chat", [Authorize] async (
         return ApiResponses.Unauthorized("User profile not found.");
     }
 
-    var responseText = await chatService.GenerateReplyAsync(request.Message.Trim(), user.Name, cancellationToken);
+    var responseText = await chatService.GenerateReplyAsync(
+        request.Message.Trim(),
+        user.Name,
+        await BuildWhatsAppUrlAsync(db, cancellationToken),
+        cancellationToken);
 
     db.ChatMessages.Add(new ChatMessage
     {
@@ -994,8 +1023,8 @@ static async Task SeedPublicSettingsAsync(AppDbContext db)
     {
         [("en", ContactPhoneSettingKey)] = "+91 9982761929",
         [("hi", ContactPhoneSettingKey)] = "+91 9982761929",
-        [("en", ContactWhatsAppSettingKey)] = "+91 9982761929",
-        [("hi", ContactWhatsAppSettingKey)] = "+91 9982761929",
+        [("en", ContactWhatsAppSettingKey)] = CurrentDefaultWhatsAppNumber,
+        [("hi", ContactWhatsAppSettingKey)] = CurrentDefaultWhatsAppNumber,
         [("en", ContactEmailSettingKey)] = "support@rkemitra.in",
         [("hi", ContactEmailSettingKey)] = "support@rkemitra.in",
         [("en", ContactSupportNoticeSettingKey)] = "If this login was not performed by you, please reset your password and contact support immediately.",
@@ -1008,8 +1037,14 @@ static async Task SeedPublicSettingsAsync(AppDbContext db)
         .ToListAsync();
     foreach (var ((language, key), value) in defaults)
     {
-        if (existing.Any(s => s.Language == language && s.Key == key))
+        var existingSetting = existing.FirstOrDefault(s => s.Language == language && s.Key == key);
+        if (existingSetting is not null)
         {
+            if (key == ContactWhatsAppSettingKey &&
+                string.Equals(existingSetting.Value, PreviousDefaultWhatsAppNumber, StringComparison.Ordinal))
+            {
+                existingSetting.Value = value;
+            }
             continue;
         }
 
@@ -1033,6 +1068,24 @@ static async Task<string?> ResolvePublicSettingValueAsync(AppDbContext db, strin
         .Select(s => s.Value)
         .FirstOrDefaultAsync(cancellationToken);
     return value;
+}
+
+static async Task<string> BuildWhatsAppUrlAsync(AppDbContext db, CancellationToken cancellationToken)
+{
+    var fallbackNumber = new string(CurrentDefaultWhatsAppNumber.Where(char.IsDigit).ToArray());
+    var rawNumber = await db.PublicSettings
+        .Where(s => s.Key == ContactWhatsAppSettingKey && s.Language == "en")
+        .Select(s => s.Value)
+        .FirstOrDefaultAsync(cancellationToken);
+    var digits = string.IsNullOrWhiteSpace(rawNumber)
+        ? fallbackNumber
+        : new string(rawNumber.Where(char.IsDigit).ToArray());
+    if (string.IsNullOrWhiteSpace(digits))
+    {
+        digits = fallbackNumber;
+    }
+
+    return $"https://wa.me/{digits}";
 }
 
 static string BuildLoginMetadata(HttpContext httpContext)

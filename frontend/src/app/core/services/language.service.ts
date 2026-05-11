@@ -80,7 +80,25 @@ const TRANSLATIONS: Record<AppLanguage, Record<string, string>> = {
     themeToggleLight: 'Switch to light mode',
     themeToggleDark: 'Switch to dark mode',
     searchPlaceholder: 'Search a location...',
-    searchNoResults: 'No results found.'
+    searchNoResults: 'No results found.',
+    mfaSectionTitle: '🔐 Two-Factor Authentication (MFA)',
+    mfaStatusEnabled: 'MFA is currently enabled.',
+    mfaStatusDisabled: 'MFA is currently disabled.',
+    mfaSetupTitle: 'Set up Authenticator App',
+    mfaSetupInstruction: 'Scan the QR code or copy the secret key into your authenticator app (e.g. Google Authenticator, Authy), then enter the 6-digit code below to activate.',
+    mfaSecretLabel: 'Secret key (manual entry):',
+    mfaOtpUriLabel: 'OTP URI:',
+    mfaRecoveryCodesTitle: 'Save your recovery codes',
+    mfaRecoveryCodesNote: 'Store these codes safely. Each can be used once if you lose access to your authenticator app.',
+    mfaCodePlaceholder: '6-digit code or recovery code',
+    mfaEnableBtn: 'Enable MFA',
+    mfaEnabling: 'Enabling...',
+    mfaDisablePrompt: 'Enter your authenticator or recovery code to disable MFA:',
+    mfaDisableBtn: 'Disable MFA',
+    mfaDisabling: 'Disabling...',
+    mfaSetupBtn: 'Set up MFA',
+    mfaSuccess: 'MFA updated successfully.',
+    mfaError: 'Invalid code. Please try again.'
   },
   hi: {
     brandName: 'आरके ऑनलाइन सेंटर',
@@ -157,7 +175,25 @@ const TRANSLATIONS: Record<AppLanguage, Record<string, string>> = {
     themeToggleLight: 'लाइट मोड पर स्विच करें',
     themeToggleDark: 'डार्क मोड पर स्विच करें',
     searchPlaceholder: 'स्थान खोजें...',
-    searchNoResults: 'कोई परिणाम नहीं मिला।'
+    searchNoResults: 'कोई परिणाम नहीं मिला।',
+    mfaSectionTitle: '🔐 दो-कारक प्रमाणीकरण (MFA)',
+    mfaStatusEnabled: 'MFA अभी सक्षम है।',
+    mfaStatusDisabled: 'MFA अभी अक्षम है।',
+    mfaSetupTitle: 'ऑथेंटिकेटर ऐप सेट करें',
+    mfaSetupInstruction: 'QR कोड स्कैन करें या सीक्रेट की को अपने ऑथेंटिकेटर ऐप (जैसे Google Authenticator, Authy) में कॉपी करें, फिर 6-अंकीय कोड दर्ज करके सक्रिय करें।',
+    mfaSecretLabel: 'सीक्रेट की (मैनुअल एंट्री):',
+    mfaOtpUriLabel: 'OTP URI:',
+    mfaRecoveryCodesTitle: 'रिकवरी कोड सुरक्षित रखें',
+    mfaRecoveryCodesNote: 'इन कोड को सुरक्षित रखें। यदि आप ऑथेंटिकेटर ऐप तक पहुंच खो देते हैं तो प्रत्येक कोड एक बार उपयोग किया जा सकता है।',
+    mfaCodePlaceholder: '6-अंकीय या रिकवरी कोड',
+    mfaEnableBtn: 'MFA सक्षम करें',
+    mfaEnabling: 'सक्षम हो रहा है...',
+    mfaDisablePrompt: 'MFA अक्षम करने के लिए अपना ऑथेंटिकेटर या रिकवरी कोड दर्ज करें:',
+    mfaDisableBtn: 'MFA अक्षम करें',
+    mfaDisabling: 'अक्षम हो रहा है...',
+    mfaSetupBtn: 'MFA सेट करें',
+    mfaSuccess: 'MFA सफलतापूर्वक अपडेट किया गया।',
+    mfaError: 'अमान्य कोड। कृपया पुनः प्रयास करें।'
   }
 };
 

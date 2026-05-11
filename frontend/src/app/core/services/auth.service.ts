@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { catchError, map, Observable, of, switchMap, tap, throwError } from 'rxjs';
 import { ApiService } from './api.service';
-import { AuthResponse, PasswordResetResponse, SecurityAlertResponse, SocialProvider, UserProfile } from '../models/api.models';
+import { AuthResponse, MfaSetupInfo, PasswordResetResponse, SecurityAlertResponse, SocialProvider, UserProfile } from '../models/api.models';
 
 const STORAGE_KEY = 'emitra.auth.token';
 
@@ -140,6 +140,39 @@ export class AuthService {
 
   resetPassword(token: string, newPassword: string): Observable<{ message: string }> {
     return this.api.post<{ message: string }>('/api/auth/reset-password', { token, newPassword }).pipe(
+      catchError((error) => throwError(() => error))
+    );
+  }
+
+  getMfaSetup(): Observable<MfaSetupInfo> {
+    const token = this.getToken();
+    return this.api.get<MfaSetupInfo>('/api/auth/mfa/setup', token).pipe(
+      catchError((error) => throwError(() => error))
+    );
+  }
+
+  enableMfa(code: string): Observable<{ enabled: boolean }> {
+    const token = this.getToken();
+    return this.api.post<{ enabled: boolean }>('/api/auth/mfa/enable', { code }, token).pipe(
+      tap(() => {
+        const current = this.user();
+        if (current) {
+          this.user.set({ ...current, mfaEnabled: true });
+        }
+      }),
+      catchError((error) => throwError(() => error))
+    );
+  }
+
+  disableMfa(code: string): Observable<{ enabled: boolean }> {
+    const token = this.getToken();
+    return this.api.post<{ enabled: boolean }>('/api/auth/mfa/disable', { code }, token).pipe(
+      tap(() => {
+        const current = this.user();
+        if (current) {
+          this.user.set({ ...current, mfaEnabled: false });
+        }
+      }),
       catchError((error) => throwError(() => error))
     );
   }

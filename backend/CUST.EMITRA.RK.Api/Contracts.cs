@@ -2,7 +2,7 @@ record SignupRequest(string Name, string Email, string Password);
 record LoginRequest(string Email, string Password, string? MfaCode = null, string? MfaChallengeToken = null);
 record ChatRequest(string Message);
 record AuthResponse(string? Token, string? Name, string? Email, bool MfaRequired = false, string? MfaChallengeToken = null, string[]? AvailableMfaMethods = null);
-record UserProfileResponse(string Name, string Email, DateTime CreatedAtUtc);
+record UserProfileResponse(string Name, string Email, DateTime CreatedAtUtc, bool MfaEnabled = false);
 record ChatResponse(string Reply, DateTime CreatedAtUtc);
 record ChatHistoryItem(string Message, string Reply, DateTime CreatedAtUtc);
 record ActivityItem(string Action, string? Metadata, DateTime CreatedAtUtc);

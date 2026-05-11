@@ -185,6 +185,14 @@ export class ContactComponent implements OnInit, OnDestroy {
     this.searchOpen.set(false);
   }
 
+  sendViaWhatsApp(): void {
+    if (!this.name.trim() || !this.email.trim() || !this.message.trim()) {
+      return;
+    }
+
+    window.open(this.getWhatsAppLink(), '_blank', 'noopener,noreferrer');
+  }
+
   sendMessage(isValid: boolean): void {
     if (!isValid || !this.name.trim() || !this.email.trim() || !this.message.trim()) {
       return;

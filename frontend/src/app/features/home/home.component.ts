@@ -13,7 +13,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { UpdatesService } from '../../core/services/updates.service';
 import { ChatService } from '../../core/services/chat.service';
 import { ActivityService } from '../../core/services/activity.service';
-import { ActivityItem, ChatHistoryItem, SocialProvider } from '../../core/models/api.models';
+import { ActivityItem, ChatHistoryItem, MfaSetupInfo, SocialProvider } from '../../core/models/api.models';
 import { LanguageService } from '../../core/services/language.service';
 
 const LOGIN_ACTIONS = new Set(['login', 'signin', 'signup', 'register', 'logout', 'auth', 'social-login']);
@@ -48,6 +48,16 @@ export class HomeComponent implements OnInit {
   changePwdCurrent = '';
   changePwdNew = '';
   changePwdConfirm = '';
+
+  // MFA management
+  readonly mfaSetupInfo = signal<MfaSetupInfo | null>(null);
+  readonly mfaSetupLoading = signal(false);
+  readonly mfaCode = signal('');
+  readonly mfaOpLoading = signal(false);
+  readonly mfaSuccess = signal('');
+  readonly mfaError = signal('');
+  mfaCodeInput = '';
+
   readonly language = inject(LanguageService);
 
   readonly loginActivity = computed(() =>
@@ -183,6 +193,54 @@ export class HomeComponent implements OnInit {
 
   toggleChat(): void {
     this.chatOpen.update((open) => !open);
+  }
+
+  onMfaSetup(): void {
+    this.mfaSuccess.set('');
+    this.mfaError.set('');
+    this.mfaSetupLoading.set(true);
+    this.auth.getMfaSetup().pipe(finalize(() => this.mfaSetupLoading.set(false))).subscribe({
+      next: (info) => this.mfaSetupInfo.set(info),
+      error: () => this.mfaError.set(this.language.t('mfaError'))
+    });
+  }
+
+  onMfaEnable(): void {
+    const code = this.mfaCodeInput.trim();
+    if (!code) {
+      return;
+    }
+
+    this.mfaSuccess.set('');
+    this.mfaError.set('');
+    this.mfaOpLoading.set(true);
+    this.auth.enableMfa(code).pipe(finalize(() => this.mfaOpLoading.set(false))).subscribe({
+      next: () => {
+        this.mfaSuccess.set(this.language.t('mfaSuccess'));
+        this.mfaSetupInfo.set(null);
+        this.mfaCodeInput = '';
+      },
+      error: () => this.mfaError.set(this.language.t('mfaError'))
+    });
+  }
+
+  onMfaDisable(): void {
+    const code = this.mfaCodeInput.trim();
+    if (!code) {
+      return;
+    }
+
+    this.mfaSuccess.set('');
+    this.mfaError.set('');
+    this.mfaOpLoading.set(true);
+    this.auth.disableMfa(code).pipe(finalize(() => this.mfaOpLoading.set(false))).subscribe({
+      next: () => {
+        this.mfaSuccess.set(this.language.t('mfaSuccess'));
+        this.mfaSetupInfo.set(null);
+        this.mfaCodeInput = '';
+      },
+      error: () => this.mfaError.set(this.language.t('mfaError'))
+    });
   }
 
   private loadUpdates(): void {
